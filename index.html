@@ -1,0 +1,2409 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>產品開發標準流程 · DIP Playbook</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23E0D4FC'/%3E%3Cstop offset='50%25' stop-color='%23C9DEFF'/%3E%3Cstop offset='100%25' stop-color='%23FBCFE8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='128' height='128' rx='32' fill='url(%23g)'/%3E%3Crect x='24' y='30' width='80' height='68' rx='8' fill='%23fff' stroke='%234F5B93' stroke-width='2'/%3E%3Crect x='32' y='42' width='28' height='4' rx='2' fill='%234F5B93'/%3E%3Crect x='32' y='52' width='64' height='3' rx='1.5' fill='%23A5B4FC'/%3E%3Crect x='32' y='60' width='52' height='3' rx='1.5' fill='%23A5B4FC'/%3E%3Crect x='32' y='68' width='60' height='3' rx='1.5' fill='%23A5B4FC'/%3E%3Ccircle cx='40' cy='84' r='4' fill='%230D9488'/%3E%3Ccircle cx='54' cy='84' r='4' fill='%234F5B93'/%3E%3Ccircle cx='68' cy='84' r='4' fill='%2316A34A'/%3E%3Ccircle cx='82' cy='84' r='4' fill='%23EA580C'/%3E%3Ccircle cx='96' cy='84' r='4' fill='%23059669'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════
+   Design Tokens
+   ═══════════════════════════════════════ */
+:root{
+  --p:#4F5B93;--p2:#7B85B3;--ink:#2C2A3E;--mut:#5A5870;--mut2:#8886A0;
+  --line:#E6E5EF;--bg:#F7F7FB;--bg2:#EDEBF7;
+  --ok:#1E8C5A;--warn:#D97706;--err:#C0392B;--sel:#EDE9FE;
+  /* 階段分類色 (5 大) */
+  --cat-explore:#0D9488;--cat-explore-bg:#E6F7F4;
+  --cat-define:#4F5B93;--cat-define-bg:#EDE9FE;
+  --cat-dev:#16A34A;--cat-dev-bg:#E6F7EB;
+  --cat-qa:#EA580C;--cat-qa-bg:#FEF0E6;
+  --cat-rel:#059669;--cat-rel-bg:#E0F5EB;
+  --cat-gate:#7B85B3;--cat-gate-bg:#F0EEFA;
+  /* 職能色 (保留原文件) */
+  --po:#4F5B93;--ux:#8E8AB8;--be:#3B6EA8;--fe:#5B8FD0;
+  --de:#1F7A8C;--da:#A05A96;--qa:#D97706;--sre:#1E8C5A;--biz:#6B6880;
+  /* 玻璃 + 家族 */
+  --glass:rgba(255,255,255,.86);--glass-b:rgba(79,91,147,.08);
+  --sh:0 2px 20px rgba(100,100,140,.08);
+  --sh-h:0 8px 32px rgba(100,100,140,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Noto Sans TC','Inter',system-ui,-apple-system,"Segoe UI","Microsoft JhengHei",sans-serif;
+  color:var(--ink);background:var(--bg);
+  line-height:1.7;font-size:14px;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+
+/* 淡淡的家族 orb，但很弱不干擾閱讀 */
+body::before,body::after{
+  content:'';position:fixed;border-radius:50%;filter:blur(100px);
+  pointer-events:none;z-index:0;opacity:.18;
+}
+body::before{width:500px;height:500px;background:#C4B5FD;top:-150px;right:-100px}
+body::after{width:400px;height:400px;background:#93C5FD;bottom:-50px;left:-100px}
+
+/* ═══════════════════════════════════════
+   Topbar（永遠在頂部，family 一致）
+   ═══════════════════════════════════════ */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:var(--glass);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--glass-b);
+  padding:10px 24px;
+}
+.topbar-inner{
+  max-width:1140px;margin:0 auto;
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+}
+.back{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--mut2);text-decoration:none;
+  padding:6px 14px;border-radius:100px;
+  background:rgba(255,255,255,.6);
+  border:1px solid var(--glass-b);
+  transition:all .2s;font-weight:600;
+}
+.back:hover{color:var(--p);border-color:var(--p2);transform:translateX(-2px);box-shadow:0 2px 12px rgba(79,91,147,.15)}
+.back:focus-visible{outline:2px solid var(--p);outline-offset:3px}
+.back .arrow{transition:transform .2s;font-weight:800}
+.back:hover .arrow{transform:translateX(-2px)}
+.back-switch{background:transparent;border:1px dashed rgba(79,91,147,.28);color:var(--mut2)}
+.back-switch:hover{background:rgba(255,255,255,.5);border-style:solid;border-color:var(--p2);color:var(--p);transform:none;box-shadow:none}
+.back-switch:hover .arrow{transform:translateX(2px)}
+.topbar-meta{margin-left:auto;font-size:11px;color:var(--mut2);font-family:'JetBrains Mono',monospace}
+
+/* ═══════════════════════════════════════
+   Container
+   ═══════════════════════════════════════ */
+.container{
+  max-width:1140px;margin:0 auto;
+  padding:36px 24px 100px;
+  position:relative;z-index:1;
+}
+
+/* ═══════════════════════════════════════
+   View (SPA 分頁)
+   ═══════════════════════════════════════ */
+.view{display:none;animation:fadeIn .35s ease}
+.view.active{display:block}
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@media(prefers-reduced-motion:reduce){.view{animation:none}}
+
+/* ═══════════════════════════════════════
+   Hero
+   ═══════════════════════════════════════ */
+.hero{text-align:center;margin-bottom:40px;position:relative;padding-bottom:28px}
+.hero::after{
+  content:'';position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  width:100%;max-width:600px;height:3px;border-radius:3px;
+  background:linear-gradient(90deg,var(--p) 0%,var(--p2) 50%,#FBCFE8 100%);
+}
+.hero-ic{font-size:48px;margin-bottom:10px}
+.hero h1{
+  font-family:'Outfit','Noto Sans TC',sans-serif;
+  font-size:clamp(26px,5vw,36px);font-weight:800;line-height:1.3;
+  color:var(--ink);letter-spacing:-.3px;
+}
+.hero h1 .accent{color:var(--p)}
+.hero-meta{margin-top:10px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:12px;color:var(--mut)}
+.hero-meta span{position:relative}
+.hero-meta span+span::before{content:'·';margin-right:14px;color:var(--mut2);opacity:.5}
+.hero-lead{
+  max-width:620px;margin:16px auto 0;font-size:15px;color:var(--mut);line-height:1.8;
+}
+
+/* 職能色票（放 Hero 下方） */
+.rolekey{
+  display:flex;flex-wrap:wrap;gap:10px;justify-content:center;
+  margin-top:20px;padding:14px 18px;
+  background:var(--glass);border:1px solid var(--glass-b);
+  border-radius:12px;backdrop-filter:blur(10px);
+  font-size:12px;color:var(--mut);
+}
+.rolekey-t{font-weight:700;color:var(--ink);margin-right:4px}
+.rt{
+  display:inline-block;min-width:38px;text-align:center;
+  font-size:11px;font-weight:700;color:#fff;padding:2px 8px;border-radius:5px;
+  letter-spacing:.3px;margin-right:3px;vertical-align:1px;
+}
+.r-po{background:var(--po)}.r-ux{background:var(--ux)}
+.r-be{background:var(--be)}.r-fe{background:var(--fe)}
+.r-de{background:var(--de)}.r-da{background:var(--da)}
+.r-qa{background:var(--qa)}.r-sre{background:var(--sre)}.r-biz{background:var(--biz)}
+
+/* ═══════════════════════════════════════
+   Pipeline（11 階段主視覺）
+   ═══════════════════════════════════════ */
+.pipeline-wrap{margin:48px 0 32px}
+.pipeline-title{
+  font-family:'Outfit','Noto Sans TC',sans-serif;
+  font-size:17px;font-weight:700;color:var(--p);
+  display:flex;align-items:center;gap:10px;margin-bottom:6px;
+}
+.pipeline-title::before{content:'';width:4px;height:18px;background:var(--p);border-radius:2px}
+.pipeline-hint{font-size:12px;color:var(--mut);margin-left:14px;margin-bottom:18px}
+
+/* 分期標籤 (探索期 / 執行期) */
+.phase-group{margin-bottom:22px}
+.phase-label{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:700;color:var(--mut2);
+  letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:10px;padding:4px 10px;
+  background:rgba(255,255,255,.6);border-radius:100px;
+}
+.phase-label.pre{color:#8E8AB8}
+.phase-label.exec{color:var(--p)}
+.phase-label .dur{opacity:.65;margin-left:4px;font-weight:600}
+
+/* 階段 Node 卡 */
+.nodes{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:10px;
+}
+.node{
+  position:relative;
+  background:#fff;border:1.5px solid var(--line);
+  border-radius:12px;padding:12px 12px 14px;
+  text-decoration:none;color:var(--ink);
+  transition:all .2s;cursor:pointer;
+  box-shadow:var(--sh);display:flex;flex-direction:column;gap:4px;
+  min-height:112px;
+}
+.node:hover{
+  transform:translateY(-3px);
+  box-shadow:0 10px 30px rgba(79,91,147,.18);
+  border-color:currentColor;
+}
+.node-head{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.node-no{
+  width:26px;height:26px;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-family:'Outfit',sans-serif;font-weight:800;font-size:13px;
+  flex-shrink:0;
+}
+.node-en{
+  font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;
+  color:var(--mut2);letter-spacing:.2px;line-height:1.2;
+  text-transform:none;
+}
+.node-nm{
+  font-size:13.5px;font-weight:700;color:var(--ink);
+  line-height:1.3;margin-top:2px;
+}
+.node-wk{
+  font-size:11px;color:var(--mut);margin-top:auto;
+  font-family:'JetBrains Mono',monospace;
+}
+.node-arrow{
+  position:absolute;top:12px;right:12px;
+  font-size:12px;color:var(--mut2);opacity:0;transition:all .2s;
+}
+.node:hover .node-arrow{opacity:1;transform:translateX(2px);color:currentColor}
+
+/* 分類顏色: 給 node 用 color (繼承到 node-no 背景、hover border) */
+.node.cat-explore{color:var(--cat-explore)}
+.node.cat-explore .node-no{background:var(--cat-explore)}
+.node.cat-define{color:var(--cat-define)}
+.node.cat-define .node-no{background:var(--cat-define)}
+.node.cat-dev{color:var(--cat-dev)}
+.node.cat-dev .node-no{background:var(--cat-dev)}
+.node.cat-qa{color:var(--cat-qa)}
+.node.cat-qa .node-no{background:var(--cat-qa)}
+.node.cat-rel{color:var(--cat-rel)}
+.node.cat-rel .node-no{background:var(--cat-rel)}
+.node.cat-gate{color:var(--cat-gate)}
+.node.cat-gate .node-no{background:var(--cat-gate)}
+/* Gate 類（Ready for Dev/STG/Prod）用 dashed border 表示「過場」 */
+.node.cat-gate{border-style:dashed}
+
+/* Pipeline Legend */
+.pipe-legend{
+  display:flex;flex-wrap:wrap;gap:8px 14px;
+  padding:12px 16px;margin-top:16px;
+  background:var(--glass);border:1px solid var(--glass-b);
+  border-radius:10px;backdrop-filter:blur(10px);
+  font-size:12px;color:var(--mut);
+}
+.pipe-legend-i{display:inline-flex;align-items:center;gap:6px}
+.pipe-legend-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+
+/* ═══════════════════════════════════════
+   Accordion（Overview 補充章節）
+   ═══════════════════════════════════════ */
+.supp-title{
+  font-family:'Outfit','Noto Sans TC',sans-serif;
+  font-size:17px;font-weight:700;color:var(--p);
+  display:flex;align-items:center;gap:10px;margin:48px 0 6px;
+}
+.supp-title::before{content:'';width:4px;height:18px;background:var(--p);border-radius:2px}
+.supp-hint{font-size:12px;color:var(--mut);margin-left:14px;margin-bottom:18px}
+.acc{
+  background:#fff;border:1px solid var(--line);
+  border-radius:12px;margin-bottom:10px;overflow:hidden;
+  box-shadow:var(--sh);transition:box-shadow .2s;
+}
+.acc:hover{box-shadow:var(--sh-h)}
+.acc-head{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 18px;cursor:pointer;user-select:none;
+  background:#fff;transition:background .15s;
+}
+.acc-head:hover{background:var(--bg2)}
+.acc-ic{
+  width:30px;height:30px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--sel);color:var(--p);font-size:15px;flex-shrink:0;
+}
+.acc-nm{
+  flex:1;font-family:'Outfit','Noto Sans TC',sans-serif;
+  font-size:14.5px;font-weight:700;color:var(--ink);
+}
+.acc-sub{font-size:12px;color:var(--mut2);font-weight:400;margin-left:8px}
+.acc-toggle{
+  color:var(--mut2);font-size:11px;transition:transform .25s;
+  display:inline-flex;align-items:center;gap:4px;
+}
+.acc.open .acc-toggle{transform:rotate(180deg)}
+.acc-body{
+  display:none;padding:4px 20px 22px;
+  border-top:1px solid var(--line);
+  animation:slideDown .25s ease;
+}
+.acc.open .acc-body{display:block}
+@keyframes slideDown{
+  from{opacity:0;transform:translateY(-6px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.acc-body h3{
+  font-size:14px;font-weight:700;color:var(--ink);
+  margin:18px 0 8px;
+}
+.acc-body h3:first-child{margin-top:14px}
+.acc-body p{font-size:13px;color:var(--mut);line-height:1.75;margin-bottom:8px}
+.acc-body ul,.acc-body ol{margin:8px 0;padding-left:22px}
+.acc-body li{margin:5px 0;font-size:13px;color:var(--mut)}
+.acc-body li b{color:var(--ink)}
+.acc-body table{
+  width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;
+  background:#fff;border-radius:8px;overflow:hidden;
+}
+.acc-body th{
+  background:var(--sel);color:var(--p);
+  text-align:left;padding:9px 11px;font-weight:700;font-size:11.5px;
+  border-bottom:2px solid rgba(79,91,147,.15);
+}
+.acc-body td{
+  padding:9px 11px;border-bottom:1px solid var(--line);
+  color:var(--mut);vertical-align:top;
+}
+.acc-body td b{color:var(--ink)}
+.acc-body code{
+  background:rgba(79,91,147,.08);padding:1px 6px;border-radius:4px;
+  font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p);
+}
+.acc-body .small{font-size:12px;color:var(--mut2)}
+.acc-body a{color:var(--p);text-decoration:none;border-bottom:1px dashed var(--p2)}
+.acc-body a:hover{border-bottom-style:solid}
+
+/* Callouts（note / warn / stop）*/
+.callout{
+  border-radius:8px;padding:12px 16px;font-size:13px;margin:12px 0;
+  line-height:1.75;
+}
+.callout .nt{display:block;font-weight:700;margin-bottom:4px}
+.callout ul,.callout ol{margin:6px 0 0;padding-left:20px}
+.callout li{margin:4px 0}
+.callout.note{background:var(--sel);color:var(--mut)}
+.callout.note .nt{color:var(--p)}
+.callout.warn{background:#FFFBEB;border-left:3px solid var(--warn);color:var(--mut)}
+.callout.warn .nt{color:var(--warn)}
+.callout.stop{background:#FDECEA;border-left:3px solid var(--err);color:var(--mut)}
+.callout.stop .nt{color:var(--err)}
+
+/* ═══════════════════════════════════════
+   Stage 詳細頁
+   ═══════════════════════════════════════ */
+.stage-crumb{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  margin-bottom:20px;font-size:12px;
+}
+.stage-crumb-count{
+  color:var(--mut2);font-family:'JetBrains Mono',monospace;
+  padding:3px 10px;background:rgba(255,255,255,.6);border-radius:100px;
+  border:1px solid var(--glass-b);
+}
+.stage-hero{
+  background:#fff;border-radius:16px;padding:28px 30px;
+  margin-bottom:24px;box-shadow:var(--sh);position:relative;
+  overflow:hidden;border:1px solid var(--line);
+}
+.stage-hero::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:5px;
+  background:currentColor;
+}
+.stage-hero-head{display:flex;align-items:center;gap:14px;margin-bottom:10px;flex-wrap:wrap}
+.stage-no-big{
+  width:48px;height:48px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-family:'Outfit',sans-serif;font-weight:800;font-size:22px;
+  background:currentColor;flex-shrink:0;
+}
+.stage-no-big span{color:#fff}
+.stage-nm-wrap{flex:1}
+.stage-en{
+  font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;
+  color:currentColor;letter-spacing:.5px;opacity:.85;
+}
+.stage-nm{
+  font-family:'Outfit','Noto Sans TC',sans-serif;
+  font-size:22px;font-weight:800;color:var(--ink);line-height:1.3;
+}
+.stage-meta{
+  display:flex;gap:14px;flex-wrap:wrap;
+  margin-top:14px;font-size:13px;
+}
+.stage-meta-i{color:var(--mut);display:inline-flex;align-items:center;gap:6px}
+.stage-meta-i b{color:var(--ink)}
+.stage-meta-lbl{font-size:11px;color:var(--mut2);font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+
+/* Stage 內容區塊 */
+.stage-sect{
+  background:#fff;border:1px solid var(--line);border-radius:12px;
+  padding:18px 22px;margin-bottom:14px;box-shadow:var(--sh);
+}
+.stage-sect-h{
+  display:flex;align-items:center;gap:10px;
+  font-family:'Outfit','Noto Sans TC',sans-serif;
+  font-size:14px;font-weight:700;color:var(--p);
+  margin-bottom:12px;padding-bottom:10px;
+  border-bottom:1px dashed var(--line);
+}
+.stage-sect-h-ic{font-size:16px}
+.stage-sect ul{margin:0;padding-left:22px}
+.stage-sect ul li{margin:6px 0;font-size:13px;color:var(--mut);line-height:1.75}
+.stage-sect ul li i{
+  color:var(--mut2);font-size:11px;font-style:normal;
+  margin-left:4px;padding:1px 7px;background:var(--sel);border-radius:4px;
+}
+
+/* 職能分工表 */
+.role-rows{display:grid;grid-template-columns:62px 1fr;gap:8px 14px;align-items:start}
+.role-rows>.rt{align-self:start;margin-top:2px}
+.role-rows>div{font-size:13px;color:var(--mut);line-height:1.75}
+.role-rows>div b{color:var(--ink)}
+
+/* Gate / 關鍵前置 / 階段內里程碑 / 本階段規則 / 回滾 */
+.stage-gate,.stage-ms,.stage-rollback{
+  padding:12px 16px;border-radius:8px;margin-bottom:14px;
+  font-size:13px;line-height:1.75;
+}
+.stage-gate{background:#FFFBEB;border-left:3px solid var(--warn);color:var(--mut)}
+.stage-gate b{color:var(--warn)}
+.stage-ms{background:var(--sel);border-left:3px solid var(--p);color:var(--mut)}
+.stage-ms b{color:var(--p)}
+.stage-rollback{background:#FDECEA;border-left:3px solid var(--err);color:var(--mut)}
+.stage-rollback b{color:var(--err)}
+
+/* Stage prev/next nav */
+.stage-nav-foot{
+  margin-top:28px;display:flex;gap:12px;flex-wrap:wrap;
+  padding-top:20px;border-top:1px dashed var(--line);
+}
+.stage-nav-btn{
+  flex:1;min-width:200px;
+  background:#fff;border:1px solid var(--line);border-radius:12px;
+  padding:14px 18px;text-decoration:none;color:var(--ink);
+  transition:all .2s;display:flex;flex-direction:column;gap:4px;
+  box-shadow:var(--sh);
+}
+.stage-nav-btn:hover{
+  transform:translateY(-2px);box-shadow:var(--sh-h);
+  border-color:currentColor;
+}
+.stage-nav-btn-lbl{font-size:11px;color:var(--mut2);font-weight:700;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.stage-nav-btn.prev{text-align:left}
+.stage-nav-btn.next{text-align:right;margin-left:auto}
+.stage-nav-btn-nm{font-weight:700;font-size:14px;color:var(--ink);display:flex;align-items:center;gap:8px}
+.stage-nav-btn.next .stage-nav-btn-lbl{justify-content:flex-end}
+.stage-nav-btn.next .stage-nav-btn-nm{justify-content:flex-end}
+.stage-nav-btn[hidden]{display:none}
+.stage-nav-btn-arrow{transition:transform .2s;font-weight:800;color:currentColor;opacity:.6}
+.stage-nav-btn:hover .stage-nav-btn-arrow{opacity:1}
+.stage-nav-btn.prev:hover .stage-nav-btn-arrow{transform:translateX(-2px)}
+.stage-nav-btn.next:hover .stage-nav-btn-arrow{transform:translateX(2px)}
+
+/* Stage category color classes */
+.stage-cat-explore{color:var(--cat-explore)}
+.stage-cat-define{color:var(--cat-define)}
+.stage-cat-dev{color:var(--cat-dev)}
+.stage-cat-qa{color:var(--cat-qa)}
+.stage-cat-rel{color:var(--cat-rel)}
+.stage-cat-gate{color:var(--cat-gate)}
+
+/* ═══════════════════════════════════════
+   Section 4 泳道 & RACI (保留原文件樣式精華)
+   ═══════════════════════════════════════ */
+.gs{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;margin:12px 0}
+.gantt{display:grid;grid-template-columns:150px repeat(90,minmax(10px,1fr));row-gap:6px;min-width:1100px}
+.gantt .hd{font-size:10px;font-weight:700;color:var(--mut);text-align:center;border-left:1px solid var(--line);padding:2px 0;grid-row:1}
+.gantt .hd.pre{color:#9A97B4;background:#F4F4F9}
+.gantt .hd.obs{color:#1E8C5A;background:#EEF7F2}
+.gantt .lb{grid-column:1;font-size:12px;font-weight:600;line-height:1.25;padding:2px 8px 2px 0;align-self:center}
+.gantt .lb u{display:block;text-decoration:none;font-weight:400;font-size:10px;color:var(--mut)}
+.grid-bg{grid-column:2/-1;background-image:linear-gradient(to right,var(--line) 1px,transparent 1px);background-size:calc(100%/18) 100%;min-height:32px}
+.bar{align-self:center;height:24px;line-height:24px;border-radius:4px;padding:0 5px;color:#fff;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;z-index:1}
+.bar:hover{overflow:visible;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.bar.pre{background:#A9A6C4}.bar.main{background:#4F5B93}.bar.hand{background:#7C7FBF}.bar.qa{background:#D97706}.bar.rel{background:#1E8C5A}.bar.obsb{opacity:.55}
+.bar.out{overflow:visible;position:relative}.bar.out span{position:absolute;top:0;color:var(--ink);font-weight:600;white-space:nowrap}.bar.outr span{left:calc(100% + 6px)}.bar.outl span{right:calc(100% + 6px)}
+.bar.dash{background:repeating-linear-gradient(45deg,#D5D4E6,#D5D4E6 5px,#EFEEF6 5px,#EFEEF6 10px)!important;color:var(--mut)!important}
+.lgd{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--mut);margin:8px 0 0}
+.lgd i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* Section 4 泳道職能 bars */
+.sw-scroll{overflow-x:auto}
+.sw-corner{grid-row:1/6}
+.sw-bgrow{grid-column:2/-1;pointer-events:none}
+.sw-stg{align-self:start;color:#fff;font-size:11px;padding:4px 6px;border-radius:4px;line-height:1.3;position:relative}
+.sw-stg b{display:block;font-size:11px;font-weight:700}
+.sw-stg small{font-size:10px;opacity:.85}
+.sw-stg.out{overflow:visible}.sw-stg.out span{position:absolute;top:4px;left:calc(100% + 6px);color:var(--ink);white-space:nowrap}
+.sw-role{grid-column:1/-1;background:var(--sel);color:var(--p);padding:4px 10px;font-size:12px;font-weight:700;border-radius:4px}
+.sw-lb{grid-column:1;font-size:11px;font-weight:600;line-height:1.2;padding-right:6px;align-self:center}
+.sw-lb u{display:block;text-decoration:none;font-weight:400;font-size:10px;color:var(--mut)}
+.sw-bar{align-self:center;height:28px;line-height:1.25;border-radius:4px;padding:3px 6px;color:#fff;font-size:10.5px;white-space:normal;overflow:hidden}
+.sw-po{background:var(--po)}.sw-ux{background:var(--ux)}.sw-be{background:var(--be)}.sw-fe{background:var(--fe)}
+.sw-de{background:var(--de)}.sw-da{background:var(--da)}.sw-qa{background:var(--qa)}.sw-sre{background:var(--sre)}.sw-biz{background:var(--biz)}
+
+/* 泳道/甘特切換 */
+.sw-tabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:0 0 12px;background:#fff}
+.sw-tabs button{border:0;background:transparent;padding:6px 16px;font:inherit;font-size:13px;color:var(--mut);cursor:pointer;font-family:inherit}
+.sw-tabs button.on{background:var(--p);color:#fff;font-weight:700}
+.sw-view[hidden]{display:none}
+
+/* RACI 矩陣 */
+.mtx{width:100%;border-collapse:collapse;font-size:12px}
+.mtx th{background:var(--sel);color:var(--p);padding:7px 8px;font-size:11px;text-align:center;font-weight:700}
+.mtx th:first-child{text-align:left}
+.mtx td{text-align:center;padding:7px 8px;border-bottom:1px solid var(--line)}
+.mtx td:first-child{text-align:left;color:var(--ink);font-weight:600}
+.rr{color:var(--err);font-weight:700}.aa{color:var(--p);font-weight:700}.cc{color:var(--ok)}.ii{color:#B9B7CA}
+
+/* ═══════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════ */
+@media(max-width:720px){
+  .topbar{padding:10px 16px}
+  .topbar-meta{display:none}
+  .container{padding:24px 16px 80px}
+  .hero h1{font-size:22px}
+  .nodes{grid-template-columns:1fr 1fr;gap:8px}
+  .node{min-height:96px;padding:10px}
+  .node-no{width:22px;height:22px;font-size:11px}
+  .node-nm{font-size:12.5px}
+  .stage-hero{padding:20px 18px}
+  .stage-nm{font-size:18px}
+  .stage-no-big{width:42px;height:42px;font-size:18px}
+  .stage-sect{padding:14px 16px}
+  .role-rows{grid-template-columns:50px 1fr;gap:6px 10px}
+  .stage-nav-foot{flex-direction:column}
+  .stage-nav-btn.next{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════ TOPBAR ═══════ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="back" href="https://pm-resources-hub.uuisme123.workers.dev/">
+      <span class="arrow">←</span> 返回 PM Resources Hub
+    </a>
+    <a class="back back-switch" href="https://dip-pm-skill-hub.uuisme123.workers.dev/">
+      切換到 DIP PM Skill Hub <span class="arrow">→</span>
+    </a>
+    <span class="topbar-meta" id="crumb-meta">DIP Playbook v1.1</span>
+  </div>
+</header>
+
+<div class="container">
+<!-- SPA 分頁內容在下方寫入 -->
+
+<!-- ═══════════════════════════════════════
+     VIEW: Overview（流程總覽主頁）
+     ═══════════════════════════════════════ -->
+<section class="view active" id="view-overview">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-ic">📋</div>
+    <h1>產品開發<span class="accent">標準流程</span></h1>
+    <div class="hero-meta">
+      <span>DIP 數據整合平台</span>
+      <span>PM Team 共用框架</span>
+      <span>v1.1</span>
+      <span>2026-09-29</span>
+    </div>
+    <p class="hero-lead">適用於軟體產品 0-1 階段（新產品或新模組首版）的跨職能共用框架。<br>探索期 4 週為前置作業，執行期 12 週對齊一季，階段命名對齊 ClickUp 卡片狀態。</p>
+
+    <div class="rolekey">
+      <span class="rolekey-t">職能代號：</span>
+      <span><span class="rt r-po">PO</span>產品負責人</span>
+      <span><span class="rt r-ux">UIUX</span>設計師</span>
+      <span><span class="rt r-be">BE</span>後端工程師</span>
+      <span><span class="rt r-fe">FE</span>前端工程師</span>
+      <span><span class="rt r-de">DE</span>數據工程</span>
+      <span><span class="rt r-da">DA</span>數據分析</span>
+      <span><span class="rt r-qa">QA</span>測試</span>
+      <span><span class="rt r-sre">SRE</span>維運</span>
+      <span><span class="rt r-biz">需求端</span>客戶／內部單位</span>
+    </div>
+  </div>
+
+  <!-- Pipeline 主視覺 -->
+  <div class="pipeline-wrap">
+    <div class="pipeline-title">11 階段流程</div>
+    <div class="pipeline-hint">👆 點任一階段看完整規範。顏色代表階段類別，虛線框代表短暫的交接閘門。</div>
+
+    <!-- 探索期 -->
+    <div class="phase-group">
+      <div class="phase-label pre">探索期 <span class="dur">· 4 週前置</span></div>
+      <div class="nodes">
+        <a class="node cat-explore" href="#/stage/0">
+          <span class="node-arrow">→</span>
+          <div class="node-head">
+            <div class="node-no">0</div>
+            <div class="node-en">Backlog</div>
+          </div>
+          <div class="node-nm">待辦</div>
+          <div class="node-wk">持續進行</div>
+        </a>
+        <a class="node cat-explore" href="#/stage/1">
+          <span class="node-arrow">→</span>
+          <div class="node-head">
+            <div class="node-no">1</div>
+            <div class="node-en">Discovery</div>
+          </div>
+          <div class="node-nm">產品探索</div>
+          <div class="node-wk">探索 W1–W4</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- 執行期 -->
+    <div class="phase-group">
+      <div class="phase-label exec">執行期 <span class="dur">· 12 週對齊一季</span></div>
+      <div class="nodes">
+        <a class="node cat-define" href="#/stage/2">
+          <span class="node-arrow">→</span>
+          <div class="node-head">
+            <div class="node-no">2</div>
+            <div class="node-en">Planning</div>
+          </div>
+          <div class="node-nm">規劃中</div>
+          <div class="node-wk">W1–W3</div>
+        </a>
+        <a class="node cat-define" href="#/stage/3">
+          <span class="node-arrow">→</span>
+          <div class="node-head">
+            <div class="node-no">3</div>
+            <div class="node-en">Design</div>
+          </div>
+          <div class="node-nm">設計中</div>
+          <div class="node-wk">W2–W4</div>
+        </a>
+        <a class="node cat-gate" href="#/stage/4">
+          <span class="node-arrow">→</span>
+          <div class="node-head">
+            <div class="node-no">4</div>
+            <div class="node-en">Ready for Dev</div>
+          </div>
+          <div class="node-nm">待開發</div>
+          <div class="node-wk">W4 D3–D5</div>
+        </a>
+        <a class="node cat-dev" href="#/stage/5">
+          <span class="node-arrow">→</span>
+          <div class="node-head">
+            <div class="node-no">5</div>
+            <div class="node-en">Development</div>
+          </div>
+          <div class="node-nm">開發中</div>
+          <div class="node-wk">W5–W9</div>
+        </a>
+        <a class="node cat-gate" href="#/stage/6">
+          <span class="node-arrow">→</span>
+          <div class="node-head">
+            <div class="node-no">6</div>
+            <div class="node-en">Ready for STG</div>
+          </div>
+          <div class="node-nm">待部署 STG</div>
+          <div class="node-wk">W9 D4–D5</div>
+        </a>
+        <a class="node cat-qa" href="#/stage/7">
+          <span class="node-arrow">→</span>
+          <div class="node-head">
+            <div class="node-no">7</div>
+            <div class="node-en">STG Testing</div>
+          </div>
+          <div class="node-nm">STG 測試中</div>
+          <div class="node-wk">W10</div>
+        </a>
+        <a class="node cat-qa" href="#/stage/8">
+          <span class="node-arrow">→</span>
+          <div class="node-head">
+            <div class="node-no">8</div>
+            <div class="node-en">STG Fixing</div>
+          </div>
+          <div class="node-nm">缺陷修復</div>
+          <div class="node-wk">W11</div>
+        </a>
+        <a class="node cat-gate" href="#/stage/9">
+          <span class="node-arrow">→</span>
+          <div class="node-head">
+            <div class="node-no">9</div>
+            <div class="node-en">Ready for Prod</div>
+          </div>
+          <div class="node-nm">待部署 Prod</div>
+          <div class="node-wk">W12 D1–D2</div>
+        </a>
+        <a class="node cat-rel" href="#/stage/10">
+          <span class="node-arrow">→</span>
+          <div class="node-head">
+            <div class="node-no">10</div>
+            <div class="node-en">Released</div>
+          </div>
+          <div class="node-nm">已上線</div>
+          <div class="node-wk">W12 D2–D5</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="pipe-legend">
+      <span class="pipe-legend-i"><span class="pipe-legend-dot" style="background:var(--cat-explore)"></span>探索</span>
+      <span class="pipe-legend-i"><span class="pipe-legend-dot" style="background:var(--cat-define)"></span>定義</span>
+      <span class="pipe-legend-i"><span class="pipe-legend-dot" style="background:var(--cat-dev)"></span>開發</span>
+      <span class="pipe-legend-i"><span class="pipe-legend-dot" style="background:var(--cat-qa)"></span>QA 測試</span>
+      <span class="pipe-legend-i"><span class="pipe-legend-dot" style="background:var(--cat-rel)"></span>上線</span>
+      <span class="pipe-legend-i"><span class="pipe-legend-dot" style="background:var(--cat-gate);border:1.5px dashed var(--cat-gate)"></span>交接閘門</span>
+    </div>
+  </div>
+
+  <!-- 補充章節：全部 Accordion 收合 -->
+  <div class="supp-title">補充章節</div>
+  <div class="supp-hint">主流程以外的參考規範。點標題展開內容。</div>
+
+  <!-- Acc 1: 文件定位與目的 -->
+  <div class="acc">
+    <div class="acc-head" onclick="toggleAcc(this)">
+      <div class="acc-ic">📖</div>
+      <div class="acc-nm">文件定位與目的 <span class="acc-sub">·  為什麼需要這份框架、怎麼使用</span></div>
+      <div class="acc-toggle">▼</div>
+    </div>
+    <div class="acc-body">
+      <h3>目的</h3>
+      <ol>
+        <li><b>建立標準化開發流程</b>：讓產品從 需求 → 設計 → 開發 → 上線 有明確流程與文件標準</li>
+        <li><b>提高跨團隊協作效率</b>：明確每個階段 誰負責、何時交付、交付什麼</li>
+        <li><b>提高產品可預測性</b>：提前評估 開發時程、控制 專案風險、管理 需求變更</li>
+        <li><b>降低產品風險</b>：降低需求不清楚就開始開發、理解落差、系統架構不一致</li>
+      </ol>
+      <h3>使用方式</h3>
+      <ol>
+        <li>專案啟動時，PO 依本框架建立專案版本，於<a href="#" onclick="openAccById('acc-raci');return false">職能參與矩陣</a>逐列標註「參與 / 不參與」，不參與職能整列刪除</li>
+        <li>ClickUp 卡片狀態直接對映本文件階段名稱，卡片流轉即流程推進</li>
+        <li>各階段通過條件未達成不進入下一階段，由 PO 裁決縮減範疇或延期</li>
+      </ol>
+      <p class="small">※ 開卡方式參閱：DIP 產品開發流程追蹤規範 &gt; 開卡</p>
+    </div>
+  </div>
+
+  <!-- Acc 2: 週期原則與拆期 -->
+  <div class="acc">
+    <div class="acc-head" onclick="toggleAcc(this)">
+      <div class="acc-ic">🔄</div>
+      <div class="acc-nm">週期原則與拆期 <span class="acc-sub">·  探索期 vs 執行期、拆期機制、週期銜接</span></div>
+      <div class="acc-toggle">▼</div>
+    </div>
+    <div class="acc-body">
+      <h3>探索期與執行期分離</h3>
+      <table>
+        <thead><tr><th style="width:16%">期別</th><th style="width:12%">長度</th><th style="width:16%">是否計入季度</th><th>說明</th></tr></thead>
+        <tbody>
+          <tr><td><b>探索期</b><br><span class="small">Discovery</span></td><td>4 週<br><span class="small">探索 W1–W4</span></td><td>不計入</td><td>前置作業，與上一週期的上線後觀察期並行。每季開工時已有完成立案的項目待做</td></tr>
+          <tr><td><b>執行期</b><br><span class="small">Planning → Released</span></td><td>12 週<br><span class="small">W1–W12</span></td><td>計入，對齊一季</td><td>規劃、設計、開發、測試、上線</td></tr>
+        </tbody>
+      </table>
+      <p class="small">探索期主要耗用 PO 與需求端的時間，執行期主要耗用 BE / FE / DE 的時間，兩期錯開後資源不互相排擠。</p>
+
+      <h3>基本週期</h3>
+      <p>執行期 12 週對齊季度，為週期長度，不是交付上限。團隊在週期內評估「可交付的範疇」，而非把範疇塞進週期</p>
+
+      <h3>拆期機制</h3>
+      <div class="callout warn">
+        <span class="nt">拆期判斷點：Ready for Dev（W4 D3–D5）</span>
+        <ul>
+          <li>Planning 完成工時估算後，若總工時超出 Development 容量（5 週 × 可投入人力），即啟動拆期</li>
+          <li>由 PO 與 BE / FE 共同評估本期可交付範疇，未納入項目退回 Backlog 並標註 Phase 2</li>
+          <li>拆期以<b>完整可交付的使用者價值</b>為切分單位，不切出半套功能（例：可整套延後「報表匯出」，但不可只做建立不做查詢）</li>
+          <li>拆期決議留紀錄，載明本期範疇、延後項目與理由，作為下期 Backlog 的進場依據</li>
+        </ul>
+      </div>
+
+      <h3>週期銜接</h3>
+      <ul>
+        <li>Released 後 1~2 週觀察期，與下一週期的探索期並行</li>
+        <li>Phase 2 項目於下一週期直接進入 Planning，不需重跑 Discovery</li>
+        <li>觀察期回收的指標成效，作為下一週期探索的輸入</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Acc 3: 階段甘特圖 -->
+  <div class="acc">
+    <div class="acc-head" onclick="toggleAcc(this)">
+      <div class="acc-ic">📊</div>
+      <div class="acc-nm">階段甘特圖 <span class="acc-sub">·  時序視角 — 以日為刻度檢視各階段重疊</span></div>
+      <div class="acc-toggle">▼</div>
+    </div>
+    <div class="acc-body">
+      <p class="small">以「日」為最小刻度（每週 5 日）；交接點（2–3 日）落在該週末段。</p>
+      <div class="gs"><div class="gantt">
+        <div class="lb" style="grid-row:1"></div>
+        <div class="hd pre" style="grid-column:2/span 5">探索W1</div>
+        <div class="hd pre" style="grid-column:7/span 5">探索W2</div>
+        <div class="hd pre" style="grid-column:12/span 5">探索W3</div>
+        <div class="hd pre" style="grid-column:17/span 5">探索W4</div>
+        <div class="hd" style="grid-column:22/span 5">W1</div>
+        <div class="hd" style="grid-column:27/span 5">W2</div>
+        <div class="hd" style="grid-column:32/span 5">W3</div>
+        <div class="hd" style="grid-column:37/span 5">W4</div>
+        <div class="hd" style="grid-column:42/span 5">W5</div>
+        <div class="hd" style="grid-column:47/span 5">W6</div>
+        <div class="hd" style="grid-column:52/span 5">W7</div>
+        <div class="hd" style="grid-column:57/span 5">W8</div>
+        <div class="hd" style="grid-column:62/span 5">W9</div>
+        <div class="hd" style="grid-column:67/span 5">W10</div>
+        <div class="hd" style="grid-column:72/span 5">W11</div>
+        <div class="hd" style="grid-column:77/span 5">W12</div>
+        <div class="hd obs" style="grid-column:82/span 5">+1W</div>
+        <div class="hd obs" style="grid-column:87/span 5">+2W</div>
+        <div class="grid-bg" style="grid-row:2"></div>
+        <div class="lb" style="grid-row:2">Backlog<u>待辦 · 持續進行</u></div>
+        <div class="bar dash" style="grid-column:2/82;grid-row:2" title="Backlog｜持續進行">待辦</div>
+        <div class="grid-bg" style="grid-row:3"></div>
+        <div class="lb" style="grid-row:3">Discovery<u>產品探索 · 探索 W1–W4 · 4W</u></div>
+        <div class="bar pre" style="grid-column:2/22;grid-row:3" title="Discovery｜探索 W1–W4 · 4W">產品探索</div>
+        <div class="grid-bg" style="grid-row:4"></div>
+        <div class="lb" style="grid-row:4">Planning<u>規劃中 · W1–W3 · 3W</u></div>
+        <div class="bar main" style="grid-column:22/37;grid-row:4" title="Planning｜W1–W3 · 3W">規劃中</div>
+        <div class="grid-bg" style="grid-row:5"></div>
+        <div class="lb" style="grid-row:5">Design<u>設計中 · W2–W4 · 3W</u></div>
+        <div class="bar main" style="grid-column:27/42;grid-row:5" title="Design｜W2–W4 · 3W">設計中</div>
+        <div class="grid-bg" style="grid-row:6"></div>
+        <div class="lb" style="grid-row:6">Ready for Dev<u>待開發 · W4 D3–D5 · 3D</u></div>
+        <div class="bar hand out outr" style="grid-column:39/42;grid-row:6" title="Ready for Dev｜W4 D3–D5 · 3D"><span>待開發</span></div>
+        <div class="grid-bg" style="grid-row:7"></div>
+        <div class="lb" style="grid-row:7">Development<u>開發中 · W5–W9 · 5W</u></div>
+        <div class="bar main" style="grid-column:42/67;grid-row:7" title="Development｜W5–W9 · 5W">開發中</div>
+        <div class="grid-bg" style="grid-row:8"></div>
+        <div class="lb" style="grid-row:8">Ready for STG<u>待部署 STG · W9 D4–D5 · 2D</u></div>
+        <div class="bar hand out outr" style="grid-column:65/67;grid-row:8" title="Ready for STG｜W9 D4–D5 · 2D"><span>待部署 STG</span></div>
+        <div class="grid-bg" style="grid-row:9"></div>
+        <div class="lb" style="grid-row:9">STG Testing<u>STG 測試中 · W10 · 1W</u></div>
+        <div class="bar qa out outr" style="grid-column:67/72;grid-row:9" title="STG Testing｜W10 · 1W"><span>STG 測試中</span></div>
+        <div class="grid-bg" style="grid-row:10"></div>
+        <div class="lb" style="grid-row:10">STG Fixing<u>缺陷修復 · W11 · 1W</u></div>
+        <div class="bar qa out outr" style="grid-column:72/77;grid-row:10" title="STG Fixing｜W11 · 1W"><span>缺陷修復</span></div>
+        <div class="grid-bg" style="grid-row:11"></div>
+        <div class="lb" style="grid-row:11">Ready for Prod<u>待部署 Prod · W12 D1–D2 · 2D</u></div>
+        <div class="bar qa out outr" style="grid-column:77/79;grid-row:11" title="Ready for Prod｜W12 D1–D2 · 2D"><span>待部署 Prod</span></div>
+        <div class="grid-bg" style="grid-row:12"></div>
+        <div class="lb" style="grid-row:12">Released<u>已上線 · W12 D2–D5 ＋ 觀察 1~2W</u></div>
+        <div class="bar rel out outl" style="grid-column:78/82;grid-row:12" title="Released｜W12 D2–D5 ＋ 觀察 1~2W"><span>已上線</span></div>
+        <div class="bar rel obsb" style="grid-column:82/92;grid-row:12" title="上線後觀察 1~2 週（DA 埋碼成效、SRE 監控告警）">觀察期</div>
+      </div></div>
+      <div class="lgd">
+        <span><i style="background:#A9A6C4"></i>探索期（不計入季度）</span>
+        <span><i style="background:#4F5B93"></i>主流程</span>
+        <span><i style="background:#7C7FBF"></i>交接點（2–3 日）</span>
+        <span><i style="background:#D97706"></i>測試與上線</span>
+        <span><i style="background:#1E8C5A"></i>已上線／觀察期</span>
+      </div>
+      <p class="small">※ 探索 W1–W4 為探索期（前置 4 週）；W1–W12 為執行期（對齊一季）；+1W~+2W 為上線後觀察期，落在執行期之外。Ready for Prod 與 Released 在 W12 D2 銜接。</p>
+    </div>
+  </div>
+
+  <!-- Acc 4: 職能 × 階段泳道 (表格 + 甘特圖切換) -->
+  <div class="acc">
+    <div class="acc-head" onclick="toggleAcc(this)">
+      <div class="acc-ic">🏊</div>
+      <div class="acc-nm">職能 × 階段泳道 <span class="acc-sub">·  誰在哪個階段做什麼 — 表格 / 甘特雙視角</span></div>
+      <div class="acc-toggle">▼</div>
+    </div>
+    <div class="acc-body">
+      <p class="small">「—」代表該階段無指派工作（仍可能被知會）；可切換表格 / 甘特圖檢視，甘特圖可左右捲動。</p>
+
+      <div class="sw-tabs" role="tablist">
+        <button type="button" class="on" data-v="sw-table">表格</button>
+        <button type="button" data-v="sw-gantt">甘特圖</button>
+      </div>
+
+      <!-- 泳道表格 -->
+      <div class="sw-view" id="sw-table">
+        <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th style="min-width:70px">職能</th>
+              <th>Backlog</th>
+              <th>Discovery<br><span class="small">探索 W1–W4</span></th>
+              <th>Planning<br><span class="small">W1–W3</span></th>
+              <th>Design<br><span class="small">W2–W4</span></th>
+              <th>Ready for Dev<br><span class="small">W4</span></th>
+              <th>Development<br><span class="small">W5–W9</span></th>
+              <th>Ready for STG<br><span class="small">W9</span></th>
+              <th>STG Testing<br><span class="small">W10</span></th>
+              <th>STG Fixing<br><span class="small">W11</span></th>
+              <th>Ready for Prod<br><span class="small">W12</span></th>
+              <th>Released<br><span class="small">W12 D2–D5</span></th>
+            </tr>
+            <tr>
+              <th>時長</th>
+              <th><span class="small">持續</span></th>
+              <th><span class="small">4W</span></th>
+              <th><span class="small">3W</span></th>
+              <th><span class="small">3W (重疊)</span></th>
+              <th><span class="small">2-3D</span></th>
+              <th><span class="small">5W</span></th>
+              <th><span class="small">2-3D</span></th>
+              <th><span class="small">1W</span></th>
+              <th><span class="small">1W</span></th>
+              <th><span class="small">2-3D</span></th>
+              <th><span class="small">1~2W</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="rt r-po">PO</span></td>
+              <td>需求池管理<br>排序</td>
+              <td>競品分析與定位<br>使用者訪談<br>方向收斂<br>立案決議<br>Kick-off Meeting<br>產品定位/目標用戶/範疇確認/風險評估<br>Prototype</td>
+              <td>PRD &amp; Spec 撰寫</td>
+              <td>開發任務拆解<br>參與設計審查</td>
+              <td>開發任務拆解<br>功能凍結</td>
+              <td>建置測試情境清單<br>建置教育訓練內容</td>
+              <td>—</td>
+              <td>整合測試<br>BUG 分級裁決</td>
+              <td>未結 BUG 裁決<br>STG 簽核</td>
+              <td>上線決議<br>教育訓練</td>
+              <td>PRD 歸檔<br>Retro Meeting</td>
+            </tr>
+            <tr>
+              <td><span class="rt r-ux">UIUX</span></td>
+              <td>—</td><td>—</td>
+              <td>設計需求確認</td>
+              <td>市調競品研究<br>Sitemap<br>Product wireflow<br>Feature wireflow<br>Mockup &amp; Design System</td>
+              <td>—</td>
+              <td>設計問題支援</td>
+              <td>—</td>
+              <td>介面問題確認</td>
+              <td>畫面相關<br>缺陷修復</td>
+              <td>—</td><td>—</td>
+            </tr>
+            <tr>
+              <td><span class="rt r-fe">FE</span></td>
+              <td>—</td><td>—</td><td>—</td>
+              <td>(需要有畫面)<br>開發前技術可行性回饋<br>工時估算</td>
+              <td>開發前規劃</td>
+              <td>程式碼撰寫<br>API 串接<br>分批部署 STG</td>
+              <td>STG 部署<br>部署後檢查</td>
+              <td>缺陷釐清支援</td>
+              <td>缺陷修復</td>
+              <td>PROD 部署準備<br>上線計畫<br>回滾方案</td>
+              <td>PROD 部署</td>
+            </tr>
+            <tr>
+              <td><span class="rt r-be">BE</span></td>
+              <td>—</td>
+              <td>初步技術可行性評估</td>
+              <td>開發前技術可行性回饋<br>工時估算</td>
+              <td>架構審查 (實作方向與架構)<br>POC 驗證(視需求)<br>工時估算</td>
+              <td>開發前規劃(SA &amp; SD 完成)<br>API 文件規劃</td>
+              <td>程式碼撰寫<br>API / Table<br>單元測試<br>Code Review<br>分批部署 STG</td>
+              <td>STG 部署<br>部署後檢查</td>
+              <td>缺陷釐清支援<br>效能測試</td>
+              <td>缺陷修復</td>
+              <td>PROD 部署準備<br>上線計畫<br>回滾方案</td>
+              <td>PROD 部署</td>
+            </tr>
+            <tr>
+              <td><span class="rt r-qa">QA</span></td>
+              <td>—</td><td>—</td>
+              <td>測試策略起草<br>STG/PROD 範圍劃分</td>
+              <td>驗收標準確認</td>
+              <td>—</td>
+              <td>建置測試情境清單<br>分批測試（功能完成即測）</td>
+              <td>部署後檢查<br>測試資料準備</td>
+              <td>整合測試<br>資料準確性驗證<br>標記上線驗證清單<br>BUG 分級</td>
+              <td>回歸測試<br>測試報告歸檔</td>
+              <td>測試結果確認</td>
+              <td>PROD 驗證</td>
+            </tr>
+            <tr>
+              <td><span class="rt r-sre">SRE</span></td>
+              <td>—</td><td>—</td>
+              <td>與 BE 討論技術選型</td>
+              <td>非功能性需求評估<br>維運觀測建議<br>(需要有架構資訊)</td>
+              <td>BE 提供預計資源使用量</td>
+              <td>視需求 調整資源/採購機器/與網路組協調<br>若有使用新服務, 上 STG 前完成</td>
+              <td>—</td><td>—</td><td>—</td><td>—</td>
+              <td>監控告警</td>
+            </tr>
+            <tr>
+              <td><span class="rt r-de">DE</span></td>
+              <td>—</td>
+              <td>初步資料可行性評估</td>
+              <td>非功能性需求評估 (同步任務速度、更新頻率...)<br>資料需求建議 (依需求提供資料存放處...)<br>* 提供架構審查資訊</td>
+              <td>POC 驗證(視需求 與BE同步)</td>
+              <td>開發前規劃</td>
+              <td>資料管線開發<br>資料品質檢核</td>
+              <td>管線部署</td>
+              <td>資料準確性驗證支援</td>
+              <td>資料相關<br>缺陷修復</td>
+              <td>PROD 部署準備(包在 BE)<br>上線計畫<br>回滾方案(包在 BE)</td>
+              <td>PROD 部署</td>
+            </tr>
+            <tr>
+              <td><span class="rt r-da">DA</span></td>
+              <td>數據洞察提供</td>
+              <td>既有數據佐證</td>
+              <td>指標字典<br>Dashboard 規劃<br>埋碼需求蒐集</td>
+              <td>Dashboard 版面協作 w/ UIUX<br>提供指標與圖表型式<br>制定埋碼規格</td>
+              <td>—</td>
+              <td>Dashboard SQL 實作</td>
+              <td>—</td>
+              <td>Dashboard 數值確認<br>查詢邏輯<br>效能調校<br>埋碼驗證</td>
+              <td>Dashboard / SQL 相關<br>缺陷修復</td>
+              <td>—</td>
+              <td>埋碼成效觀察（+1~+2 週）</td>
+            </tr>
+            <tr>
+              <td><span class="rt r-biz">需求端</span></td>
+              <td>需求提出</td>
+              <td>訪談受訪</td>
+              <td>產品雛形確認</td>
+              <td>設計預期確認</td>
+              <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+              <td>參與教育訓練</td>
+              <td>PROD 驗收<br>PROD 簽核 &amp; 結案</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <!-- 泳道甘特圖 (完整保留原文件) -->
+      <div class="sw-view" id="sw-gantt" hidden>
+        <div class="sw-scroll"><div class="gantt" style="grid-template-rows:auto;row-gap:4px">
+          <div class="lb sw-corner" style="grid-row:1/6">職能 / 階段</div>
+          <div class="hd pre" style="grid-column:2/span 5">探索W1</div>
+          <div class="hd pre" style="grid-column:7/span 5">探索W2</div>
+          <div class="hd pre" style="grid-column:12/span 5">探索W3</div>
+          <div class="hd pre" style="grid-column:17/span 5">探索W4</div>
+          <div class="hd" style="grid-column:22/span 5">W1</div>
+          <div class="hd" style="grid-column:27/span 5">W2</div>
+          <div class="hd" style="grid-column:32/span 5">W3</div>
+          <div class="hd" style="grid-column:37/span 5">W4</div>
+          <div class="hd" style="grid-column:42/span 5">W5</div>
+          <div class="hd" style="grid-column:47/span 5">W6</div>
+          <div class="hd" style="grid-column:52/span 5">W7</div>
+          <div class="hd" style="grid-column:57/span 5">W8</div>
+          <div class="hd" style="grid-column:62/span 5">W9</div>
+          <div class="hd" style="grid-column:67/span 5">W10</div>
+          <div class="hd" style="grid-column:72/span 5">W11</div>
+          <div class="hd" style="grid-column:77/span 5">W12</div>
+          <div class="hd obs" style="grid-column:82/span 5">+1W</div>
+          <div class="hd obs" style="grid-column:87/span 5">+2W</div>
+
+          <!-- PO -->
+          <div class="sw-role" style="grid-row:2">PO</div>
+          <div class="lb sw-lb" style="grid-row:3">Backlog</div>
+          <div class="grid-bg" style="grid-row:3"></div>
+          <div class="bar sw-bar sw-po" style="grid-column:2/82;grid-row:3">需求池管理 · 排序</div>
+          <div class="lb sw-lb" style="grid-row:4">Discovery<u>探索 W1–W4</u></div>
+          <div class="grid-bg" style="grid-row:4"></div>
+          <div class="bar sw-bar sw-po" style="grid-column:2/22;grid-row:4">競品分析/訪談/收斂/立案/Kick-off</div>
+          <div class="lb sw-lb" style="grid-row:5">Planning<u>W1–W3</u></div>
+          <div class="grid-bg" style="grid-row:5"></div>
+          <div class="bar sw-bar sw-po" style="grid-column:22/37;grid-row:5">PRD &amp; Spec 撰寫</div>
+          <div class="lb sw-lb" style="grid-row:6">Design<u>W2–W4</u></div>
+          <div class="grid-bg" style="grid-row:6"></div>
+          <div class="bar sw-bar sw-po" style="grid-column:27/42;grid-row:6">開發任務拆解 · 參與設計審查</div>
+          <div class="lb sw-lb" style="grid-row:7">Ready for Dev<u>W4</u></div>
+          <div class="grid-bg" style="grid-row:7"></div>
+          <div class="bar sw-bar sw-po" style="grid-column:39/42;grid-row:7">任務拆解 · 功能凍結</div>
+          <div class="lb sw-lb" style="grid-row:8">Development<u>W5–W9</u></div>
+          <div class="grid-bg" style="grid-row:8"></div>
+          <div class="bar sw-bar sw-po" style="grid-column:42/67;grid-row:8">測試情境清單 · 教育訓練內容</div>
+          <div class="lb sw-lb" style="grid-row:9">STG Testing<u>W10</u></div>
+          <div class="grid-bg" style="grid-row:9"></div>
+          <div class="bar sw-bar sw-po" style="grid-column:67/72;grid-row:9">整合測試 · BUG 分級</div>
+          <div class="lb sw-lb" style="grid-row:10">STG Fixing<u>W11</u></div>
+          <div class="grid-bg" style="grid-row:10"></div>
+          <div class="bar sw-bar sw-po" style="grid-column:72/77;grid-row:10">未結 BUG 裁決 · STG 簽核</div>
+          <div class="lb sw-lb" style="grid-row:11">Ready for Prod<u>W12</u></div>
+          <div class="grid-bg" style="grid-row:11"></div>
+          <div class="bar sw-bar sw-po" style="grid-column:77/79;grid-row:11">上線決議 · 教育訓練</div>
+          <div class="lb sw-lb" style="grid-row:12">Released<u>W12 D2–D5</u></div>
+          <div class="grid-bg" style="grid-row:12"></div>
+          <div class="bar sw-bar sw-po" style="grid-column:78/82;grid-row:12">PRD 歸檔 · Retro</div>
+
+          <!-- UIUX -->
+          <div class="sw-role" style="grid-row:13">UIUX</div>
+          <div class="lb sw-lb" style="grid-row:14">Planning<u>W1–W3</u></div>
+          <div class="grid-bg" style="grid-row:14"></div>
+          <div class="bar sw-bar sw-ux" style="grid-column:22/37;grid-row:14">設計需求確認</div>
+          <div class="lb sw-lb" style="grid-row:15">Design<u>W2–W4</u></div>
+          <div class="grid-bg" style="grid-row:15"></div>
+          <div class="bar sw-bar sw-ux" style="grid-column:27/42;grid-row:15">市調 · Sitemap · wireflow · Mockup</div>
+          <div class="lb sw-lb" style="grid-row:16">Development<u>W5–W9</u></div>
+          <div class="grid-bg" style="grid-row:16"></div>
+          <div class="bar sw-bar sw-ux" style="grid-column:42/67;grid-row:16">設計問題支援</div>
+          <div class="lb sw-lb" style="grid-row:17">STG Testing<u>W10</u></div>
+          <div class="grid-bg" style="grid-row:17"></div>
+          <div class="bar sw-bar sw-ux" style="grid-column:67/72;grid-row:17">介面問題確認</div>
+          <div class="lb sw-lb" style="grid-row:18">STG Fixing<u>W11</u></div>
+          <div class="grid-bg" style="grid-row:18"></div>
+          <div class="bar sw-bar sw-ux" style="grid-column:72/77;grid-row:18">畫面相關缺陷修復</div>
+
+          <!-- FE -->
+          <div class="sw-role" style="grid-row:19">FE</div>
+          <div class="lb sw-lb" style="grid-row:20">Design<u>W2–W4</u></div>
+          <div class="grid-bg" style="grid-row:20"></div>
+          <div class="bar sw-bar sw-fe" style="grid-column:27/42;grid-row:20">技術可行性回饋 · 工時估算</div>
+          <div class="lb sw-lb" style="grid-row:21">Ready for Dev<u>W4</u></div>
+          <div class="grid-bg" style="grid-row:21"></div>
+          <div class="bar sw-bar sw-fe" style="grid-column:39/42;grid-row:21">開發前規劃</div>
+          <div class="lb sw-lb" style="grid-row:22">Development<u>W5–W9</u></div>
+          <div class="grid-bg" style="grid-row:22"></div>
+          <div class="bar sw-bar sw-fe" style="grid-column:42/67;grid-row:22">程式碼撰寫 · API 串接 · 分批部署</div>
+          <div class="lb sw-lb" style="grid-row:23">Ready for STG<u>W9</u></div>
+          <div class="grid-bg" style="grid-row:23"></div>
+          <div class="bar sw-bar sw-fe" style="grid-column:65/67;grid-row:23">STG 部署 · 部署後檢查</div>
+          <div class="lb sw-lb" style="grid-row:24">STG Testing<u>W10</u></div>
+          <div class="grid-bg" style="grid-row:24"></div>
+          <div class="bar sw-bar sw-fe" style="grid-column:67/72;grid-row:24">缺陷釐清支援</div>
+          <div class="lb sw-lb" style="grid-row:25">STG Fixing<u>W11</u></div>
+          <div class="grid-bg" style="grid-row:25"></div>
+          <div class="bar sw-bar sw-fe" style="grid-column:72/77;grid-row:25">缺陷修復</div>
+          <div class="lb sw-lb" style="grid-row:26">Ready for Prod<u>W12</u></div>
+          <div class="grid-bg" style="grid-row:26"></div>
+          <div class="bar sw-bar sw-fe" style="grid-column:77/79;grid-row:26">PROD 部署準備 · 回滾方案</div>
+          <div class="lb sw-lb" style="grid-row:27">Released<u>W12</u></div>
+          <div class="grid-bg" style="grid-row:27"></div>
+          <div class="bar sw-bar sw-fe" style="grid-column:78/82;grid-row:27">PROD 部署</div>
+
+          <!-- BE -->
+          <div class="sw-role" style="grid-row:28">BE</div>
+          <div class="lb sw-lb" style="grid-row:29">Discovery<u>探索 W1–W4</u></div>
+          <div class="grid-bg" style="grid-row:29"></div>
+          <div class="bar sw-bar sw-be" style="grid-column:2/22;grid-row:29">初步技術可行性評估</div>
+          <div class="lb sw-lb" style="grid-row:30">Planning<u>W1–W3</u></div>
+          <div class="grid-bg" style="grid-row:30"></div>
+          <div class="bar sw-bar sw-be" style="grid-column:22/37;grid-row:30">技術可行性回饋 · 工時估算</div>
+          <div class="lb sw-lb" style="grid-row:31">Design<u>W2–W4</u></div>
+          <div class="grid-bg" style="grid-row:31"></div>
+          <div class="bar sw-bar sw-be" style="grid-column:27/42;grid-row:31">架構審查 · POC · 工時估算</div>
+          <div class="lb sw-lb" style="grid-row:32">Ready for Dev<u>W4</u></div>
+          <div class="grid-bg" style="grid-row:32"></div>
+          <div class="bar sw-bar sw-be" style="grid-column:39/42;grid-row:32">開發前規劃 · API 文件規劃</div>
+          <div class="lb sw-lb" style="grid-row:33">Development<u>W5–W9</u></div>
+          <div class="grid-bg" style="grid-row:33"></div>
+          <div class="bar sw-bar sw-be" style="grid-column:42/67;grid-row:33">撰寫/單元測試/Code Review/分批部署</div>
+          <div class="lb sw-lb" style="grid-row:34">Ready for STG<u>W9</u></div>
+          <div class="grid-bg" style="grid-row:34"></div>
+          <div class="bar sw-bar sw-be" style="grid-column:65/67;grid-row:34">STG 部署 · 部署後檢查</div>
+          <div class="lb sw-lb" style="grid-row:35">STG Testing<u>W10</u></div>
+          <div class="grid-bg" style="grid-row:35"></div>
+          <div class="bar sw-bar sw-be" style="grid-column:67/72;grid-row:35">缺陷釐清支援 · 效能測試</div>
+          <div class="lb sw-lb" style="grid-row:36">STG Fixing<u>W11</u></div>
+          <div class="grid-bg" style="grid-row:36"></div>
+          <div class="bar sw-bar sw-be" style="grid-column:72/77;grid-row:36">缺陷修復</div>
+          <div class="lb sw-lb" style="grid-row:37">Ready for Prod<u>W12</u></div>
+          <div class="grid-bg" style="grid-row:37"></div>
+          <div class="bar sw-bar sw-be" style="grid-column:77/79;grid-row:37">PROD 部署準備 · 回滾方案</div>
+          <div class="lb sw-lb" style="grid-row:38">Released<u>W12</u></div>
+          <div class="grid-bg" style="grid-row:38"></div>
+          <div class="bar sw-bar sw-be" style="grid-column:78/82;grid-row:38">PROD 部署</div>
+
+          <!-- QA -->
+          <div class="sw-role" style="grid-row:39">QA</div>
+          <div class="lb sw-lb" style="grid-row:40">Planning<u>W1–W3</u></div>
+          <div class="grid-bg" style="grid-row:40"></div>
+          <div class="bar sw-bar sw-qa" style="grid-column:22/37;grid-row:40">測試策略起草 · STG/PROD 範圍劃分</div>
+          <div class="lb sw-lb" style="grid-row:41">Design<u>W2–W4</u></div>
+          <div class="grid-bg" style="grid-row:41"></div>
+          <div class="bar sw-bar sw-qa" style="grid-column:27/42;grid-row:41">驗收標準確認</div>
+          <div class="lb sw-lb" style="grid-row:42">Development<u>W5–W9</u></div>
+          <div class="grid-bg" style="grid-row:42"></div>
+          <div class="bar sw-bar sw-qa" style="grid-column:42/67;grid-row:42">測試情境清單 · 分批測試</div>
+          <div class="lb sw-lb" style="grid-row:43">Ready for STG<u>W9</u></div>
+          <div class="grid-bg" style="grid-row:43"></div>
+          <div class="bar sw-bar sw-qa" style="grid-column:65/67;grid-row:43">部署後檢查 · 測試資料準備</div>
+          <div class="lb sw-lb" style="grid-row:44">STG Testing<u>W10</u></div>
+          <div class="grid-bg" style="grid-row:44"></div>
+          <div class="bar sw-bar sw-qa" style="grid-column:67/72;grid-row:44">整合測試 · 資料驗證 · BUG 分級</div>
+          <div class="lb sw-lb" style="grid-row:45">STG Fixing<u>W11</u></div>
+          <div class="grid-bg" style="grid-row:45"></div>
+          <div class="bar sw-bar sw-qa" style="grid-column:72/77;grid-row:45">回歸測試 · 報告歸檔</div>
+          <div class="lb sw-lb" style="grid-row:46">Ready for Prod<u>W12</u></div>
+          <div class="grid-bg" style="grid-row:46"></div>
+          <div class="bar sw-bar sw-qa" style="grid-column:77/79;grid-row:46">測試結果確認</div>
+          <div class="lb sw-lb" style="grid-row:47">Released<u>W12</u></div>
+          <div class="grid-bg" style="grid-row:47"></div>
+          <div class="bar sw-bar sw-qa" style="grid-column:78/82;grid-row:47">PROD 驗證</div>
+
+          <!-- SRE -->
+          <div class="sw-role" style="grid-row:48">SRE</div>
+          <div class="lb sw-lb" style="grid-row:49">Planning<u>W1–W3</u></div>
+          <div class="grid-bg" style="grid-row:49"></div>
+          <div class="bar sw-bar sw-sre" style="grid-column:22/37;grid-row:49">與 BE 討論技術選型</div>
+          <div class="lb sw-lb" style="grid-row:50">Design<u>W2–W4</u></div>
+          <div class="grid-bg" style="grid-row:50"></div>
+          <div class="bar sw-bar sw-sre" style="grid-column:27/42;grid-row:50">非功能性需求評估 · 維運觀測建議</div>
+          <div class="lb sw-lb" style="grid-row:51">Ready for Dev<u>W4</u></div>
+          <div class="grid-bg" style="grid-row:51"></div>
+          <div class="bar sw-bar sw-sre" style="grid-column:39/42;grid-row:51">BE 提供預計資源使用量</div>
+          <div class="lb sw-lb" style="grid-row:52">Development<u>W5–W9</u></div>
+          <div class="grid-bg" style="grid-row:52"></div>
+          <div class="bar sw-bar sw-sre" style="grid-column:42/67;grid-row:52">資源調整/採購/網路協調</div>
+          <div class="lb sw-lb" style="grid-row:53">Released<u>W12</u></div>
+          <div class="grid-bg" style="grid-row:53"></div>
+          <div class="bar sw-bar sw-sre" style="grid-column:78/82;grid-row:53">監控告警</div>
+
+          <!-- DE -->
+          <div class="sw-role" style="grid-row:54">DE</div>
+          <div class="lb sw-lb" style="grid-row:55">Discovery<u>探索 W1–W4</u></div>
+          <div class="grid-bg" style="grid-row:55"></div>
+          <div class="bar sw-bar sw-de" style="grid-column:2/22;grid-row:55">初步資料可行性評估</div>
+          <div class="lb sw-lb" style="grid-row:56">Planning<u>W1–W3</u></div>
+          <div class="grid-bg" style="grid-row:56"></div>
+          <div class="bar sw-bar sw-de" style="grid-column:22/37;grid-row:56">非功能性需求 · 資料需求建議</div>
+          <div class="lb sw-lb" style="grid-row:57">Design<u>W2–W4</u></div>
+          <div class="grid-bg" style="grid-row:57"></div>
+          <div class="bar sw-bar sw-de" style="grid-column:27/42;grid-row:57">POC 驗證 (與 BE 同步)</div>
+          <div class="lb sw-lb" style="grid-row:58">Ready for Dev<u>W4</u></div>
+          <div class="grid-bg" style="grid-row:58"></div>
+          <div class="bar sw-bar sw-de" style="grid-column:39/42;grid-row:58">開發前規劃</div>
+          <div class="lb sw-lb" style="grid-row:59">Development<u>W5–W9</u></div>
+          <div class="grid-bg" style="grid-row:59"></div>
+          <div class="bar sw-bar sw-de" style="grid-column:42/67;grid-row:59">資料管線開發 · 品質檢核</div>
+          <div class="lb sw-lb" style="grid-row:60">Ready for STG<u>W9</u></div>
+          <div class="grid-bg" style="grid-row:60"></div>
+          <div class="bar sw-bar sw-de" style="grid-column:65/67;grid-row:60">管線部署</div>
+          <div class="lb sw-lb" style="grid-row:61">STG Testing<u>W10</u></div>
+          <div class="grid-bg" style="grid-row:61"></div>
+          <div class="bar sw-bar sw-de" style="grid-column:67/72;grid-row:61">資料準確性驗證支援</div>
+          <div class="lb sw-lb" style="grid-row:62">STG Fixing<u>W11</u></div>
+          <div class="grid-bg" style="grid-row:62"></div>
+          <div class="bar sw-bar sw-de" style="grid-column:72/77;grid-row:62">資料相關缺陷修復</div>
+          <div class="lb sw-lb" style="grid-row:63">Ready for Prod<u>W12</u></div>
+          <div class="grid-bg" style="grid-row:63"></div>
+          <div class="bar sw-bar sw-de" style="grid-column:77/79;grid-row:63">PROD 部署準備 (包在 BE)</div>
+          <div class="lb sw-lb" style="grid-row:64">Released<u>W12</u></div>
+          <div class="grid-bg" style="grid-row:64"></div>
+          <div class="bar sw-bar sw-de" style="grid-column:78/82;grid-row:64">PROD 部署</div>
+
+          <!-- DA -->
+          <div class="sw-role" style="grid-row:65">DA</div>
+          <div class="lb sw-lb" style="grid-row:66">Backlog</div>
+          <div class="grid-bg" style="grid-row:66"></div>
+          <div class="bar sw-bar sw-da" style="grid-column:2/82;grid-row:66">數據洞察提供</div>
+          <div class="lb sw-lb" style="grid-row:67">Discovery<u>探索 W1–W4</u></div>
+          <div class="grid-bg" style="grid-row:67"></div>
+          <div class="bar sw-bar sw-da" style="grid-column:2/22;grid-row:67">既有數據佐證</div>
+          <div class="lb sw-lb" style="grid-row:68">Planning<u>W1–W3</u></div>
+          <div class="grid-bg" style="grid-row:68"></div>
+          <div class="bar sw-bar sw-da" style="grid-column:22/37;grid-row:68">指標字典 · Dashboard 規劃 · 埋碼需求</div>
+          <div class="lb sw-lb" style="grid-row:69">Design<u>W2–W4</u></div>
+          <div class="grid-bg" style="grid-row:69"></div>
+          <div class="bar sw-bar sw-da" style="grid-column:27/42;grid-row:69">Dashboard 版面 · 埋碼規格</div>
+          <div class="lb sw-lb" style="grid-row:70">Development<u>W5–W9</u></div>
+          <div class="grid-bg" style="grid-row:70"></div>
+          <div class="bar sw-bar sw-da" style="grid-column:42/67;grid-row:70">Dashboard SQL 實作</div>
+          <div class="lb sw-lb" style="grid-row:71">STG Testing<u>W10</u></div>
+          <div class="grid-bg" style="grid-row:71"></div>
+          <div class="bar sw-bar sw-da" style="grid-column:67/72;grid-row:71">Dashboard 數值確認 · 埋碼驗證</div>
+          <div class="lb sw-lb" style="grid-row:72">STG Fixing<u>W11</u></div>
+          <div class="grid-bg" style="grid-row:72"></div>
+          <div class="bar sw-bar sw-da" style="grid-column:72/77;grid-row:72">Dashboard/SQL 缺陷修復</div>
+          <div class="lb sw-lb" style="grid-row:73">Released<u>W12 + 觀察</u></div>
+          <div class="grid-bg" style="grid-row:73"></div>
+          <div class="bar sw-bar sw-da" style="grid-column:78/92;grid-row:73">埋碼成效觀察（+1~+2 週）</div>
+
+          <!-- 需求端 -->
+          <div class="sw-role" style="grid-row:74">需求端</div>
+          <div class="lb sw-lb" style="grid-row:75">Backlog</div>
+          <div class="grid-bg" style="grid-row:75"></div>
+          <div class="bar sw-bar sw-biz" style="grid-column:2/82;grid-row:75">需求提出</div>
+          <div class="lb sw-lb" style="grid-row:76">Discovery<u>探索 W1–W4</u></div>
+          <div class="grid-bg" style="grid-row:76"></div>
+          <div class="bar sw-bar sw-biz" style="grid-column:2/22;grid-row:76">訪談受訪</div>
+          <div class="lb sw-lb" style="grid-row:77">Planning<u>W1–W3</u></div>
+          <div class="grid-bg" style="grid-row:77"></div>
+          <div class="bar sw-bar sw-biz" style="grid-column:22/37;grid-row:77">產品雛形確認</div>
+          <div class="lb sw-lb" style="grid-row:78">Design<u>W2–W4</u></div>
+          <div class="grid-bg" style="grid-row:78"></div>
+          <div class="bar sw-bar sw-biz" style="grid-column:27/42;grid-row:78">設計預期確認</div>
+          <div class="lb sw-lb" style="grid-row:79">Ready for Prod<u>W12</u></div>
+          <div class="grid-bg" style="grid-row:79"></div>
+          <div class="bar sw-bar sw-biz" style="grid-column:77/79;grid-row:79">參與教育訓練</div>
+          <div class="lb sw-lb" style="grid-row:80">Released<u>W12 D2–D5</u></div>
+          <div class="grid-bg" style="grid-row:80"></div>
+          <div class="bar sw-bar sw-biz" style="grid-column:78/82;grid-row:80">PROD 驗收 · 簽核結案</div>
+        </div></div>
+      </div>
+
+      <p class="small" style="margin-top:10px">* 各職能以 1 人 人力預估　* 目前已有自動化部屬範本, RD 可自行建置　* 採購機器時常較長, 需提前安排</p>
+      <p class="small">※ DE 與 DA 為跨階段工作線，不佔用獨立的 ClickUp 卡片狀態，任務以子任務掛在對應主階段的卡片下。</p>
+    </div>
+  </div>
+
+  <!-- Acc 5: RACI 矩陣 -->
+  <div class="acc" id="acc-raci">
+    <div class="acc-head" onclick="toggleAcc(this)">
+      <div class="acc-ic">📋</div>
+      <div class="acc-nm">職能參與矩陣 (RACI) <span class="acc-sub">·  每個階段誰負責、誰決策、誰諮詢、誰知會</span></div>
+      <div class="acc-toggle">▼</div>
+    </div>
+    <div class="acc-body">
+      <p class="small"><span class="rr">R</span> 執行　<span class="aa">A</span> 決策　<span class="cc">C</span> 諮詢　<span class="ii">I</span> 知會</p>
+      <div style="overflow-x:auto">
+      <table class="mtx">
+        <thead><tr>
+          <th>職能</th><th>Backlog</th><th>Discovery</th><th>Planning</th><th>Design</th>
+          <th>Ready<br>for Dev</th><th>Develop<br>ment</th><th>Ready<br>for STG</th>
+          <th>STG<br>Testing</th><th>STG<br>Fixing</th><th>Ready<br>for Prod</th><th>Released</th>
+        </tr></thead>
+        <tbody>
+          <tr><td>PO 產品負責人</td><td><span class="rr">R</span>/<span class="aa">A</span></td><td><span class="rr">R</span>/<span class="aa">A</span></td><td><span class="rr">R</span>/<span class="aa">A</span></td><td><span class="rr">R</span>/<span class="aa">A</span></td><td><span class="rr">R</span>/<span class="aa">A</span></td><td><span class="rr">R</span>/<span class="aa">A</span></td><td><span class="ii">I</span></td><td><span class="rr">R</span>/<span class="aa">A</span></td><td><span class="aa">A</span></td><td><span class="rr">R</span>/<span class="aa">A</span></td><td><span class="rr">R</span>/<span class="aa">A</span></td></tr>
+          <tr><td>UIUX 設計師</td><td><span class="ii">I</span></td><td><span class="ii">I</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td><td><span class="ii">I</span></td><td><span class="cc">C</span></td><td><span class="ii">I</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td><td><span class="ii">I</span></td><td><span class="ii">I</span></td></tr>
+          <tr><td>BE 後端工程師</td><td><span class="ii">I</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td></tr>
+          <tr><td>FE 前端工程師</td><td><span class="ii">I</span></td><td><span class="ii">I</span></td><td><span class="ii">I</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td></tr>
+          <tr><td>DE 數據工程</td><td><span class="ii">I</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td></tr>
+          <tr><td>DA 數據分析</td><td><span class="cc">C</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="ii">I</span></td><td><span class="rr">R</span></td><td><span class="ii">I</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="ii">I</span></td><td><span class="rr">R</span></td></tr>
+          <tr><td>QA 測試</td><td><span class="ii">I</span></td><td><span class="ii">I</span></td><td><span class="rr">R</span></td><td><span class="cc">C</span></td><td><span class="ii">I</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td></tr>
+          <tr><td>SRE</td><td><span class="ii">I</span></td><td><span class="ii">I</span></td><td><span class="cc">C</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="ii">I</span></td><td><span class="ii">I</span></td><td><span class="ii">I</span></td><td><span class="ii">I</span></td><td><span class="rr">R</span></td></tr>
+          <tr><td>需求端 / 客戶</td><td><span class="rr">R</span></td><td><span class="rr">R</span></td><td><span class="cc">C</span></td><td><span class="cc">C</span></td><td><span class="ii">I</span></td><td><span class="ii">I</span></td><td><span class="ii">I</span></td><td><span class="ii">I</span></td><td><span class="ii">I</span></td><td><span class="cc">C</span></td><td><span class="rr">R</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="callout note">
+        <span class="nt">專案版本調整方式</span>
+        <ol>
+          <li>專案啟動時由 PO 逐列標註「參與 / 不參與」，不參與職能整列刪除，並於文件註明刪除原因</li>
+          <li>「QA（PO 代）」為過渡註記：QA 職能未到位前由 PO 代行，到位後移除此註記</li>
+          <li>同一階段出現多個 R 時，需於專案版本指定該階段的單一收斂窗口（通常為 PO 或 BE）</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- Acc 6: 會議節奏 -->
+  <div class="acc">
+    <div class="acc-head" onclick="toggleAcc(this)">
+      <div class="acc-ic">📅</div>
+      <div class="acc-nm">會議節奏 <span class="acc-sub">·  Kick-off / 週會 / 站立 / Retro 時點</span></div>
+      <div class="acc-toggle">▼</div>
+    </div>
+    <div class="acc-body">
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th style="width:20%">會議</th><th style="width:15%">時點</th><th style="width:8%">時長</th><th style="width:9%">主持</th><th style="width:20%">參與</th><th>產出</th></tr></thead>
+        <tbody>
+          <tr><td><b>Kick-off Meeting</b></td><td>探索 W4 末（立案通過後）</td><td>60 分</td><td>PO</td><td>DI 相關同仁</td><td>Kick-off 會議紀錄</td></tr>
+          <tr><td><b>每週產品進度</b></td><td>W1–W12 每週</td><td>60 分</td><td>PO</td><td>全職能</td><td>進度與風險更新</td></tr>
+          <tr><td><b>站立會議</b></td><td>W5–W12 每週二、三、四</td><td>15 分</td><td>PO</td><td>BE、FE、PO</td><td>阻礙項目排除</td></tr>
+          <tr><td><b>Retro Meeting</b></td><td>觀察期末（上線 +1~+2 週）</td><td>90 分</td><td>PO</td><td>全職能</td><td>Retro 報告、流程改善項</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="small">※ PM 每週四彙整當週進度與未完成項目，作為每週產品進度與週報的共同來源。</p>
+    </div>
+  </div>
+
+  <!-- Acc 7: 測試與上線規範 -->
+  <div class="acc">
+    <div class="acc-head" onclick="toggleAcc(this)">
+      <div class="acc-ic">🧪</div>
+      <div class="acc-nm">測試與上線規範 <span class="acc-sub">·  STG/PROD 範圍、Test Tier、P0 Journey、回滾判準</span></div>
+      <div class="acc-toggle">▼</div>
+    </div>
+    <div class="acc-body">
+      <h3>8.1 環境測試範圍劃分</h3>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th style="width:16%"></th><th style="width:42%">STG（W5–W9 分批測試 + W10–W11 整合測試與修復）</th><th>PROD（W12，1 週）</th></tr></thead>
+        <tbody>
+          <tr><td><b>目的</b></td><td>驗證功能與資料正確性</td><td>驗證環境差異帶來的風險，完成驗收</td></tr>
+          <tr><td><b>測什麼</b></td><td>整合測試、資料準確性驗證、效能測試、Dashboard 數值確認、埋碼驗證</td><td>PROD 部署結果（上線驗證清單）、監控告警、需求端 PROD 驗收</td></tr>
+          <tr><td><b>案例來源</b></td><td>完整測試情境清單（依 Test Tier 標註 P0 / P1 / P2）</td><td>上線驗證清單（主流程 + 高風險項，10–15 項），由 QA 於 W10 測試執行時標記</td></tr>
+          <tr><td><b>不做什麼</b></td><td>—</td><td>不重跑 STG 已通過的功能案例</td></tr>
+          <tr><td><b>缺陷處理</b></td><td>修復後回歸，Blocker 全數結案；Major 依風險評估（PO 裁決）</td><td>觸發回滾判準即回滾，不在 PROD 現場修</td></tr>
+          <tr><td><b>簽核</b></td><td>PO（STG 簽核）</td><td>需求端（PROD 簽核 &amp; 結案）</td></tr>
+          <tr><td><b>主責</b></td><td>QA</td><td>QA / 需求端</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>8.2 Test Tier 定義（測試優先級 / Release 必要性）</h3>
+      <p class="small">Test Tier 用來定義測試的重要性與執行範圍，決定 Release Gate 條件，不是缺陷嚴重程度。</p>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th style="width:18%">Tier</th><th style="width:38%">定義</th><th style="width:26%">Release 關係</th><th>失敗影響</th></tr></thead>
+        <tbody>
+          <tr><td><b>P0</b> Must Pass<br><span class="small">核心旅程 · 發佈必需</span></td><td>核心 Customer Journey、關鍵 Business Outcome、登入 / 權限、主要資料流、關鍵整合</td><td>Release 前必須 PASS</td><td>阻擋發佈</td></tr>
+          <tr><td><b>P1</b> Core Feature<br><span class="small">主要功能 · 高業務影響</span></td><td>主要功能與常用情境，失敗會明顯影響使用，但不一定直接中斷 P0 Journey</td><td>Release 前必須 PASS（依 8.4 測試狀態定義）</td><td>阻擋發佈</td></tr>
+          <tr><td><b>P2</b> Regression<br><span class="small">非核心 · 回歸與邊界</span></td><td>非核心流程、低頻功能、邊界條件、相容性與歷史 Regression</td><td>不作為單一 Release Gate，但需追蹤修復</td><td>記錄並追蹤</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="callout note">
+        <span class="nt">重點提醒</span>
+        <ul>
+          <li>P0 / P1 / P2 是測試優先級，不是 Bug Severity（Severity＝缺陷影響多大；Test Tier＝測試多重要）</li>
+          <li>所有 Test Fail 都要建立缺陷並追蹤修復</li>
+          <li>即使是 P2 發現的問題，只要影響重大，Severity 仍可能是 Blocker</li>
+          <li>即使是 P0 發現的問題，若僅是 UI 顯示問題，Severity 可能是 Minor</li>
+        </ul>
+      </div>
+
+      <h3>8.3 P0 Journey 定義</h3>
+      <ul>
+        <li>P0 是 Customer Journey，不是 UI Case 或 API Case；任一步失敗，都視為優先修復，並免阻斷 Release</li>
+        <li>P0 Journey 以 End-to-End、含關聯結果驗證為原則（例：建立 → 執行 → 確認外部送達 → 查看報表數據）</li>
+        <li>各專案於 Planning 測試策略起草時列出本產品的 P0 Journey 清單，依序編號 P0-01、P0-02…</li>
+      </ul>
+
+      <h3>8.4 測試狀態定義</h3>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>狀態</th><th>P0（Must Pass）</th><th>P1（Core Feature）</th><th>P2（Regression）</th><th>P3（Non Running）</th></tr></thead>
+        <tbody>
+          <tr><td><b>Stable 正常執行</b></td><td>PASS</td><td>PASS</td><td>PASS</td><td>PASS</td></tr>
+          <tr><td><b>Flaky 偶發失敗</b></td><td>PASS</td><td>PASS</td><td>PASS</td><td>PASS</td></tr>
+          <tr><td><b>Broken 系統性失敗</b></td><td>FAIL</td><td>FAIL</td><td>FAIL</td><td>FAIL</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="small">※ P0 / P1 必須在 Release 前為 PASS（P2 / P3 可在後續處理）</p>
+
+      <h3>8.5 PROD 回滾判準</h3>
+      <div class="callout stop">
+        <span class="nt">以下任一成立即執行回滾，不在 PROD 現場修</span>
+        <ol>
+          <li>上線驗證清單的主流程項目失敗</li>
+          <li>正式資料源接不通或權限設定錯誤</li>
+          <li>監控顯示錯誤率或延遲超出上線前設定的門檻</li>
+        </ol>
+      </div>
+      <ul>
+        <li>回滾決策者：PO；執行者：BE / FE（DE 資料段包在 BE）</li>
+        <li>回滾後缺陷退回 STG Fixing 處理，重新走 STG Fixing → Ready for Prod → Released</li>
+        <li>回滾判準的具體門檻值（錯誤率、延遲）於 Ready for Prod 上線計畫中填入</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Acc 8: 變更管理與缺陷分級 -->
+  <div class="acc">
+    <div class="acc-head" onclick="toggleAcc(this)">
+      <div class="acc-ic">🔀</div>
+      <div class="acc-nm">變更管理與缺陷分級 <span class="acc-sub">·  何時可改 PRD、Blocker/Major/Minor 判斷</span></div>
+      <div class="acc-toggle">▼</div>
+    </div>
+    <div class="acc-body">
+      <h3>變更管理</h3>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th style="width:20%">變更提出時點</th><th style="width:40%">處理方式</th><th>裁決者</th></tr></thead>
+        <tbody>
+          <tr><td>探索 W1–執行 W3<br><span class="small">Discovery / Planning</span></td><td>直接納入規劃，更新 PRD &amp; Spec</td><td>PO</td></tr>
+          <tr><td>W4<br><span class="small">Design 末 / Ready for Dev</span></td><td>重新估時；超出容量則進拆期評估；功能凍結後不再納入</td><td>PO + BE / FE</td></tr>
+          <tr><td>W5 起<br><span class="small">Development 之後</span></td><td>一律開立變更單，評估影響（工時、時程、風險）後裁決納入本期或 Phase 2</td><td>PO（重大變更需主管核可）</td></tr>
+          <tr><td>W11 起<br><span class="small">STG Fixing 之後</span></td><td>僅接受 Blocker / Major 缺陷修復引發的必要變更，其餘一律列入 Phase 2</td><td>PO</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="small">變更單需載明：變更內容、原因、影響範圍（功能 / 工時 / 時程 / 其他職能）、建議處置。</p>
+
+      <h3>缺陷分級（Severity，依 Business Impact）</h3>
+      <p class="small">Severity 用來評估缺陷影響程度，不等同於是否迴歸；所有 FAIL 測試皆需建立缺陷並追蹤修復。</p>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th style="width:12%">等級</th><th style="width:28%">定義</th><th style="width:36%">判斷條件（任一符合即適用）</th><th>對 Release 的影響</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>Blocker</b><br><span class="small">重大阻斷</span></td>
+            <td>導致 P0 Customer Journey 無法完成，或產生錯誤的 Business Result，或存在不可接受的安全 / 資料完整性 / 權限風險</td>
+            <td><ul style="margin:0;padding-left:16px">
+              <li>P0 核心流程失敗，無法完成</li>
+              <li>造成錯誤資料 / 錯誤受眾 / 錯誤發送</li>
+              <li>資料遺失 / 破壞 / 跨租戶資料外洩</li>
+              <li>嚴重安全漏洞 / 權限越權</li>
+              <li>系統回應成功但實際未執行</li>
+              <li>沒有替代方式完成相同 Business Outcome</li>
+            </ul></td>
+            <td>必須修復才能通過 Release Gate</td>
+          </tr>
+          <tr>
+            <td><b>Major</b><br><span class="small">主要缺陷</span></td>
+            <td>功能存在明顯異常，影響部分使用情境或功能，但 P0 Business Outcome 仍可正確完成，且不涉及不可接受的資料或安全風險</td>
+            <td><ul style="margin:0;padding-left:16px">
+              <li>核心功能部分不可用或結果不正確</li>
+              <li>部分使用者 / 條件受影響</li>
+              <li>可透過其他正式流程或替代方式完成（workaround）</li>
+              <li>資料呈現異常但不影響實際執行結果</li>
+              <li>效能明顯退化但仍可完成（超過 SLA）</li>
+              <li>整合 / API 回應缺少非必要欄位</li>
+            </ul></td>
+            <td>應修復（是否阻擋發佈由風險評估決定，PO 裁決）</td>
+          </tr>
+          <tr>
+            <td><b>Minor</b><br><span class="small">次要缺陷</span></td>
+            <td>功能與 Business Outcome 均正確，僅影響使用體驗、顯示或非關鍵操作，不影響資料正確性與安全性</td>
+            <td><ul style="margin:0;padding-left:16px">
+              <li>UI / 文字 / 排版 / 顏色 / Icon 問題</li>
+              <li>Tooltip / Warning Message 文字不正確</li>
+              <li>非必要欄位顯示錯誤</li>
+              <li>輕微效能下降且未超過 SLA</li>
+              <li>翻譯錯誤 / 文案拼字錯誤</li>
+            </ul></td>
+            <td>應追蹤修復，不直接阻擋發佈</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>Severity 判斷流程</h3>
+      <ol>
+        <li>是否導致 P0 Journey 無法完成？ <b>是 → Blocker</b>；否 → 下一題</li>
+        <li>是否可能造成錯誤的 Business Result？（錯誤資料 / 錯誤受眾 / 安全 / 權限 / 資料遺失） <b>是 → Blocker</b>；否 → 下一題</li>
+        <li>Business Result 是否仍可完成，但有部分功能異常？ <b>是 → Major</b>；否 → 下一題</li>
+        <li>功能結果正確，僅影響 UI / UX / 顯示或非關鍵操作？ <b>是 → Minor</b></li>
+      </ol>
+    </div>
+  </div>
+
+</section>
+<!-- end of #view-overview -->
+
+<!-- ═══════════════════════════════════════
+     VIEW: Stage Pages × 11
+     ═══════════════════════════════════════ -->
+
+<!-- Stage 0: Backlog -->
+<section class="view stage-cat-explore" id="view-stage-0">
+  <nav class="stage-crumb">
+    <a class="back" href="#/overview"><span class="arrow">←</span> 返回流程總覽</a>
+    <span class="stage-crumb-count">01 / 11 · Backlog</span>
+  </nav>
+  <header class="stage-hero">
+    <div class="stage-hero-head">
+      <div class="stage-no-big"><span>0</span></div>
+      <div class="stage-nm-wrap">
+        <div class="stage-en">Backlog</div>
+        <div class="stage-nm">待辦</div>
+      </div>
+    </div>
+    <div class="stage-meta">
+      <div class="stage-meta-i"><span class="stage-meta-lbl">時長</span><b>持續進行</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">主責</span><b>PO</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">期別</span><b>探索期</b></div>
+    </div>
+  </header>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">◀</span>收到</div>
+    <ul>
+      <li>業務需求 <i>需求端</i></li>
+      <li>數據洞察 <i>DA</i></li>
+      <li>客戶回饋、市場調查 <i>需求端</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">👥</span>職能分工</div>
+    <div class="role-rows">
+      <span class="rt r-po">PO</span><div>需求池管理；週期起始前完成排序</div>
+      <span class="rt r-da">DA</span><div>數據洞察提供</div>
+      <span class="rt r-biz">需求端</span><div>需求提出，說明業務價值與使用情境</div>
+    </div>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">▶</span>交出</div>
+    <ul>
+      <li>進入 Discovery 的項目清單 <i>→ Discovery</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-gate"><b>通過條件 — 排期</b>　條目需具備：① 業務價值敘述 ② 對應客群或使用者角色 ③ 粗估規模。三項齊備才可排入探索期</div>
+
+  <nav class="stage-nav-foot">
+    <a class="stage-nav-btn prev" href="#/overview" hidden></a>
+    <a class="stage-nav-btn next stage-cat-explore" href="#/stage/1">
+      <div class="stage-nav-btn-lbl">下一階段 <span class="stage-nav-btn-arrow">→</span></div>
+      <div class="stage-nav-btn-nm">1 · Discovery 產品探索</div>
+    </a>
+  </nav>
+</section>
+
+<!-- Stage 1: Discovery -->
+<section class="view stage-cat-explore" id="view-stage-1">
+  <nav class="stage-crumb">
+    <a class="back" href="#/overview"><span class="arrow">←</span> 返回流程總覽</a>
+    <span class="stage-crumb-count">02 / 11 · Discovery</span>
+  </nav>
+  <header class="stage-hero">
+    <div class="stage-hero-head">
+      <div class="stage-no-big"><span>1</span></div>
+      <div class="stage-nm-wrap">
+        <div class="stage-en">Discovery</div>
+        <div class="stage-nm">產品探索</div>
+      </div>
+    </div>
+    <div class="stage-meta">
+      <div class="stage-meta-i"><span class="stage-meta-lbl">時長</span><b>探索 W1–W4（4 週，前置）</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">主責</span><b>PO</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">期別</span><b>探索期</b></div>
+    </div>
+  </header>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">◀</span>收到</div>
+    <ul>
+      <li>進入 Discovery 的項目清單 <i>Backlog</i></li>
+      <li>業務需求 / 數據洞察 / 客戶回饋 / 市場調查</li>
+    </ul>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">👥</span>職能分工</div>
+    <div class="role-rows">
+      <span class="rt r-po">PO</span><div><b>探索 W1</b> 競品分析與產品定位<br><b>探索 W2</b> 使用者訪談<br><b>探索 W2 末</b> 方向收斂（未收斂則調整訪談對象或縮小題目，不順延）<br><b>探索 W3</b> 訪談彙整、核心價值與範疇假設<br><b>探索 W4 後段</b> 立案決議<br><b>探索 W4 末</b>（立案通過後）Kick-off Meeting；產品定位 / 目標用戶 / 範疇確認 / 風險評估 / Prototype</div>
+      <span class="rt r-be">BE</span><div><b>探索 W3–W4</b> 初步技術可行性評估</div>
+      <span class="rt r-de">DE</span><div><b>探索 W3–W4</b> 初步資料可行性評估</div>
+      <span class="rt r-da">DA</span><div>既有數據佐證</div>
+      <span class="rt r-biz">需求端</span><div>訪談受訪</div>
+    </div>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">▶</span>交出</div>
+    <ul>
+      <li>PRD &amp; Spec <b>1. Product Overview</b> <i>→ Planning、Design</i></li>
+      <li>訪談紀錄、使用者訪談報告 <i>→ Planning</i></li>
+      <li>Prototype <i>→ Planning、Design</i></li>
+      <li>可行性評估摘要 <i>→ 立案決議</i></li>
+      <li>立案決議紀錄 <i>→ 主管、執行期</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-gate"><b>通過條件 — 立案</b>　主管與需求端確認「做 / 不做 / 延後」。未能立案者退回 Backlog</div>
+
+  <nav class="stage-nav-foot">
+    <a class="stage-nav-btn prev stage-cat-explore" href="#/stage/0">
+      <div class="stage-nav-btn-lbl"><span class="stage-nav-btn-arrow">←</span> 上一階段</div>
+      <div class="stage-nav-btn-nm">0 · Backlog 待辦</div>
+    </a>
+    <a class="stage-nav-btn next stage-cat-define" href="#/stage/2">
+      <div class="stage-nav-btn-lbl">下一階段 <span class="stage-nav-btn-arrow">→</span></div>
+      <div class="stage-nav-btn-nm">2 · Planning 規劃中</div>
+    </a>
+  </nav>
+</section>
+
+<!-- Stage 2: Planning -->
+<section class="view stage-cat-define" id="view-stage-2">
+  <nav class="stage-crumb">
+    <a class="back" href="#/overview"><span class="arrow">←</span> 返回流程總覽</a>
+    <span class="stage-crumb-count">03 / 11 · Planning</span>
+  </nav>
+  <header class="stage-hero">
+    <div class="stage-hero-head">
+      <div class="stage-no-big"><span>2</span></div>
+      <div class="stage-nm-wrap">
+        <div class="stage-en">Planning</div>
+        <div class="stage-nm">規劃中</div>
+      </div>
+    </div>
+    <div class="stage-meta">
+      <div class="stage-meta-i"><span class="stage-meta-lbl">時長</span><b>W1–W3（3 週）</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">主責</span><b>PO</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">期別</span><b>執行期</b></div>
+    </div>
+  </header>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">◀</span>收到</div>
+    <ul>
+      <li>PRD &amp; Spec 1. Product Overview <i>Discovery</i></li>
+      <li>使用者訪談報告 <i>Discovery</i></li>
+      <li>Prototype <i>Discovery</i></li>
+      <li>可行性評估摘要 <i>BE / DE</i></li>
+      <li>立案決議紀錄 <i>主管</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">👥</span>職能分工</div>
+    <div class="role-rows">
+      <span class="rt r-po">PO</span><div><b>W1–W3</b> PRD &amp; Spec 撰寫</div>
+      <span class="rt r-be">BE</span><div>開發前技術可行性回饋；工時估算</div>
+      <span class="rt r-de">DE</span><div>非功能性需求評估（同步任務速度、更新頻率…）；資料需求建議（依需求提供資料存放處…）；提供架構審查資訊</div>
+      <span class="rt r-da">DA</span><div>指標字典；Dashboard 規劃；埋碼需求蒐集</div>
+      <span class="rt r-ux">UIUX</span><div>設計需求確認</div>
+      <span class="rt r-qa">QA</span><div>測試策略起草；STG / PROD 範圍劃分</div>
+      <span class="rt r-sre">SRE</span><div>與 BE 討論技術選型</div>
+      <span class="rt r-biz">需求端</span><div><b>W3</b> 產品雛形確認</div>
+    </div>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">▶</span>交出</div>
+    <ul>
+      <li>PRD &amp; Spec <b>2.、3.、5.1.1–5.1.9</b> <i>→ Design、Ready for Dev</i></li>
+      <li>非功能性需求、資料需求建議 <i>→ Design（架構審查）</i></li>
+      <li>指標字典、Dashboard 規劃 <i>→ Design、Development</i></li>
+      <li>工時估算 <i>→ Ready for Dev</i></li>
+      <li>風險清單、測試策略 <i>→ 全職能、STG Testing</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-gate"><b>通過條件 — 規劃完成</b>　PRD &amp; Spec 各職能會簽 ＋ 需求端確認產品雛形 ＋ 工時估算完成</div>
+  <div class="stage-ms"><b>關鍵前置</b>　DE 資料需求需外部團隊配合時，前置期長於本階段；DA 指標與 Dashboard 規劃晚交付會造成版面無法進 Design。兩項均需於本階段結束前確認</div>
+
+  <nav class="stage-nav-foot">
+    <a class="stage-nav-btn prev stage-cat-explore" href="#/stage/1">
+      <div class="stage-nav-btn-lbl"><span class="stage-nav-btn-arrow">←</span> 上一階段</div>
+      <div class="stage-nav-btn-nm">1 · Discovery 產品探索</div>
+    </a>
+    <a class="stage-nav-btn next stage-cat-define" href="#/stage/3">
+      <div class="stage-nav-btn-lbl">下一階段 <span class="stage-nav-btn-arrow">→</span></div>
+      <div class="stage-nav-btn-nm">3 · Design 設計中</div>
+    </a>
+  </nav>
+</section>
+
+<!-- Stage 3: Design -->
+<section class="view stage-cat-define" id="view-stage-3">
+  <nav class="stage-crumb">
+    <a class="back" href="#/overview"><span class="arrow">←</span> 返回流程總覽</a>
+    <span class="stage-crumb-count">04 / 11 · Design</span>
+  </nav>
+  <header class="stage-hero">
+    <div class="stage-hero-head">
+      <div class="stage-no-big"><span>3</span></div>
+      <div class="stage-nm-wrap">
+        <div class="stage-en">Design</div>
+        <div class="stage-nm">設計中</div>
+      </div>
+    </div>
+    <div class="stage-meta">
+      <div class="stage-meta-i"><span class="stage-meta-lbl">時長</span><b>W2–W4（3 週，W2–W3 與 Planning 並行）</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">主責</span><b>UIUX</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">期別</span><b>執行期</b></div>
+    </div>
+  </header>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">◀</span>收到</div>
+    <ul>
+      <li>PRD &amp; Spec 1. Product Overview <i>Discovery</i></li>
+      <li>2. Product Design（2.1–2.3） <i>Planning</i></li>
+      <li>Prototype <i>Discovery</i></li>
+      <li>5. Feature &amp; Technical Spec <i>Planning</i></li>
+      <li>Dashboard 規劃 <i>DA</i></li>
+      <li>非功能性需求、架構審查資訊 <i>DE / SRE</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">👥</span>職能分工</div>
+    <div class="role-rows">
+      <span class="rt r-ux">UIUX</span><div><b>W2</b> 市調競品研究；Sitemap<br><b>W3</b> Product wireflow、Feature wireflow<br><b>W4</b> Mockup &amp; Design System<br>各稿完成時進行設計審查</div>
+      <span class="rt r-be">BE</span><div>架構審查（實作方向與架構）；POC 驗證（視需求）；工時估算</div>
+      <span class="rt r-fe">FE</span><div><b>W3 起</b>（需要有畫面）開發前技術可行性回饋；工時估算</div>
+      <span class="rt r-de">DE</span><div>POC 驗證（視需求，與 BE 同步）</div>
+      <span class="rt r-da">DA</span><div>Dashboard 版面協作 w/ UIUX；提供指標與圖表型式；制定埋碼規格</div>
+      <span class="rt r-sre">SRE</span><div>非功能性需求評估；維運觀測建議（需要有架構資訊）</div>
+      <span class="rt r-qa">QA</span><div>驗收標準確認</div>
+      <span class="rt r-po">PO</span><div>開發任務拆解；參與設計審查</div>
+      <span class="rt r-biz">需求端</span><div>設計預期確認</div>
+    </div>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">▶</span>交出</div>
+    <ul>
+      <li>Sitemap <i>→ PRD 2.4</i></li>
+      <li>Product wireflow <i>→ PRD 2.5</i></li>
+      <li>Feature wireflow、Mockup、Design System <i>→ PRD 5.1.5</i></li>
+      <li>Dashboard mockup <i>→ PRD 5.1.5</i></li>
+      <li>架構審查決議紀錄、POC 結果 <i>→ Ready for Dev</i></li>
+      <li>埋碼規格 <i>→ Development、QA</i></li>
+      <li>驗收標準（確認版） <i>→ Development、STG Testing</i></li>
+      <li>工時估算（BE / FE） <i>→ Ready for Dev</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-gate"><b>通過條件 — 設計定稿</b>　Mockup 通過審查、Design System 元件庫可供開發引用 ＋ 架構審查通過</div>
+
+  <nav class="stage-nav-foot">
+    <a class="stage-nav-btn prev stage-cat-define" href="#/stage/2">
+      <div class="stage-nav-btn-lbl"><span class="stage-nav-btn-arrow">←</span> 上一階段</div>
+      <div class="stage-nav-btn-nm">2 · Planning 規劃中</div>
+    </a>
+    <a class="stage-nav-btn next stage-cat-gate" href="#/stage/4">
+      <div class="stage-nav-btn-lbl">下一階段 <span class="stage-nav-btn-arrow">→</span></div>
+      <div class="stage-nav-btn-nm">4 · Ready for Dev 待開發</div>
+    </a>
+  </nav>
+</section>
+
+<!-- Stage 4: Ready for Dev -->
+<section class="view stage-cat-gate" id="view-stage-4">
+  <nav class="stage-crumb">
+    <a class="back" href="#/overview"><span class="arrow">←</span> 返回流程總覽</a>
+    <span class="stage-crumb-count">05 / 11 · Ready for Dev</span>
+  </nav>
+  <header class="stage-hero">
+    <div class="stage-hero-head">
+      <div class="stage-no-big"><span>4</span></div>
+      <div class="stage-nm-wrap">
+        <div class="stage-en">Ready for Dev</div>
+        <div class="stage-nm">待開發</div>
+      </div>
+    </div>
+    <div class="stage-meta">
+      <div class="stage-meta-i"><span class="stage-meta-lbl">時長</span><b>W4 D3–D5（3 日）</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">主責</span><b>PO / BE</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">性質</span><b>交接閘門</b></div>
+    </div>
+  </header>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">◀</span>收到</div>
+    <ul>
+      <li>PRD &amp; Spec 5. Feature &amp; Technical Spec <i>Planning</i></li>
+      <li>架構審查決議紀錄 <i>BE</i></li>
+      <li>工時估算 <i>BE / FE</i></li>
+      <li>各設計稿與 Design System <i>Design</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">👥</span>職能分工</div>
+    <div class="role-rows">
+      <span class="rt r-po">PO</span><div>開發任務拆解（依開卡規範建卡）；功能凍結 — 工時超出容量即啟動拆期</div>
+      <span class="rt r-be">BE</span><div>開發前規劃（SA &amp; SD 完成）；API 文件規劃</div>
+      <span class="rt r-fe">FE</span><div>開發前規劃</div>
+      <span class="rt r-de">DE</span><div>開發前規劃</div>
+      <span class="rt r-sre">SRE</span><div>BE 提供預計資源使用量</div>
+    </div>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">▶</span>交出</div>
+    <ul>
+      <li>ClickUp 卡片（含驗收標準、估時、負責人） <i>→ Development</i></li>
+      <li>SA &amp; SD、API 文件 <i>→ Development、FE、DA</i></li>
+      <li>預計資源使用量 <i>→ SRE、Development</i></li>
+      <li>功能凍結範疇、Phase 2 清單 <i>→ Backlog</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-gate"><b>通過條件 — 開發就緒</b>　每張卡具備驗收標準、估時、負責人；工時總和在 Development 容量內；功能凍結。超出則拆期：以完整可交付的使用者價值為單位切分，不切出半套功能</div>
+
+  <nav class="stage-nav-foot">
+    <a class="stage-nav-btn prev stage-cat-define" href="#/stage/3">
+      <div class="stage-nav-btn-lbl"><span class="stage-nav-btn-arrow">←</span> 上一階段</div>
+      <div class="stage-nav-btn-nm">3 · Design 設計中</div>
+    </a>
+    <a class="stage-nav-btn next stage-cat-dev" href="#/stage/5">
+      <div class="stage-nav-btn-lbl">下一階段 <span class="stage-nav-btn-arrow">→</span></div>
+      <div class="stage-nav-btn-nm">5 · Development 開發中</div>
+    </a>
+  </nav>
+</section>
+
+<!-- Stage 5: Development -->
+<section class="view stage-cat-dev" id="view-stage-5">
+  <nav class="stage-crumb">
+    <a class="back" href="#/overview"><span class="arrow">←</span> 返回流程總覽</a>
+    <span class="stage-crumb-count">06 / 11 · Development</span>
+  </nav>
+  <header class="stage-hero">
+    <div class="stage-hero-head">
+      <div class="stage-no-big"><span>5</span></div>
+      <div class="stage-nm-wrap">
+        <div class="stage-en">Development</div>
+        <div class="stage-nm">開發中</div>
+      </div>
+    </div>
+    <div class="stage-meta">
+      <div class="stage-meta-i"><span class="stage-meta-lbl">時長</span><b>W5–W9（5 週）</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">主責</span><b>BE / FE</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">期別</span><b>執行期</b></div>
+    </div>
+  </header>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">◀</span>收到</div>
+    <ul>
+      <li>ClickUp 卡片 <i>Ready for Dev</i></li>
+      <li>SA &amp; SD、API 文件 <i>BE</i></li>
+      <li>設計稿、Design System <i>UIUX</i></li>
+      <li>指標字典、埋碼規格、Dashboard 規劃 <i>DA</i></li>
+      <li>預計資源使用量 <i>BE → SRE</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">👥</span>職能分工</div>
+    <div class="role-rows">
+      <span class="rt r-be">BE</span><div><b>W5–W9 D3</b> 程式碼撰寫、API / Table、單元測試、Code Review；功能完成即分批部署 STG</div>
+      <span class="rt r-fe">FE</span><div><b>W5–W9 D3</b> 程式碼撰寫、API 串接；功能完成即分批部署 STG</div>
+      <span class="rt r-de">DE</span><div><b>W5–W9 D3</b> 資料管線開發、資料品質檢核</div>
+      <span class="rt r-da">DA</span><div><b>W5–W9 D3</b> Dashboard SQL 實作</div>
+      <span class="rt r-qa">QA</span><div>建置測試情境清單；分批測試（功能完成即測，缺陷隨開發修復）</div>
+      <span class="rt r-po">PO</span><div>建置測試情境清單；建置教育訓練內容</div>
+      <span class="rt r-sre">SRE</span><div>視需求調整資源／採購機器／與網路組協調；若有使用新服務, 上 STG 前完成</div>
+      <span class="rt r-ux">UIUX</span><div>設計問題支援</div>
+    </div>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">▶</span>交出</div>
+    <ul>
+      <li>Code / API / Table / Unit Test <i>→ Ready for STG</i></li>
+      <li>Pipeline、資料品質檢核 <i>→ Ready for STG</i></li>
+      <li>Dashboard SQL <i>→ Ready for STG</i></li>
+      <li>測試情境清單 <i>→ STG Testing</i></li>
+      <li>教育訓練內容 <i>→ Ready for Prod</i></li>
+      <li>STG / PROD 所需資源 <i>→ Ready for STG</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-ms"><b>階段內里程碑</b>　<b>W6 末</b> 核心流程打通（主要路徑端到端跑通）　·　<b>W8 末</b> 功能開發完成　·　<b>W9 D3</b> 收斂完成，不進新功能<br><b>節奏</b>　每週二、三、四站立會議 15 分　·　每週產品進度 60 分</div>
+  <div class="stage-gate"><b>通過條件 — 開發完成</b>　本期範疇功能完整、單元測試通過、Code Review 完成、分批測試已執行、無已知阻斷問題</div>
+
+  <nav class="stage-nav-foot">
+    <a class="stage-nav-btn prev stage-cat-gate" href="#/stage/4">
+      <div class="stage-nav-btn-lbl"><span class="stage-nav-btn-arrow">←</span> 上一階段</div>
+      <div class="stage-nav-btn-nm">4 · Ready for Dev 待開發</div>
+    </a>
+    <a class="stage-nav-btn next stage-cat-gate" href="#/stage/6">
+      <div class="stage-nav-btn-lbl">下一階段 <span class="stage-nav-btn-arrow">→</span></div>
+      <div class="stage-nav-btn-nm">6 · Ready for STG 待部署 STG</div>
+    </a>
+  </nav>
+</section>
+
+<!-- Stage 6: Ready for STG -->
+<section class="view stage-cat-gate" id="view-stage-6">
+  <nav class="stage-crumb">
+    <a class="back" href="#/overview"><span class="arrow">←</span> 返回流程總覽</a>
+    <span class="stage-crumb-count">07 / 11 · Ready for STG</span>
+  </nav>
+  <header class="stage-hero">
+    <div class="stage-hero-head">
+      <div class="stage-no-big"><span>6</span></div>
+      <div class="stage-nm-wrap">
+        <div class="stage-en">Ready for STG</div>
+        <div class="stage-nm">待部署 STG</div>
+      </div>
+    </div>
+    <div class="stage-meta">
+      <div class="stage-meta-i"><span class="stage-meta-lbl">時長</span><b>W9 D4–D5（2 日）</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">主責</span><b>BE / FE</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">性質</span><b>交接閘門</b></div>
+    </div>
+  </header>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">◀</span>收到</div>
+    <ul>
+      <li>Code / API / Table <i>BE / FE</i></li>
+      <li>Pipeline <i>DE</i></li>
+      <li>Dashboard SQL <i>DA</i></li>
+      <li>STG 資源 <i>SRE</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">👥</span>職能分工</div>
+    <div class="role-rows">
+      <span class="rt r-be">BE</span><div>STG 部署；部署後檢查</div>
+      <span class="rt r-fe">FE</span><div>STG 部署；部署後檢查</div>
+      <span class="rt r-de">DE</span><div>管線部署</div>
+      <span class="rt r-qa">QA</span><div>部署後檢查；測試資料準備</div>
+    </div>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">▶</span>交出</div>
+    <ul>
+      <li>STG 環境 產品 / 功能釋出 <i>→ STG Testing</i></li>
+      <li>部署後檢查結果 <i>→ 通過條件檢核</i></li>
+      <li>STG 測試資料 <i>→ STG Testing</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-gate"><b>通過條件 — 可測</b>　STG 部署完成、部署後檢查通過（主流程可走）、測試資料就緒，QA 可開始測試</div>
+
+  <nav class="stage-nav-foot">
+    <a class="stage-nav-btn prev stage-cat-dev" href="#/stage/5">
+      <div class="stage-nav-btn-lbl"><span class="stage-nav-btn-arrow">←</span> 上一階段</div>
+      <div class="stage-nav-btn-nm">5 · Development 開發中</div>
+    </a>
+    <a class="stage-nav-btn next stage-cat-qa" href="#/stage/7">
+      <div class="stage-nav-btn-lbl">下一階段 <span class="stage-nav-btn-arrow">→</span></div>
+      <div class="stage-nav-btn-nm">7 · STG Testing STG 測試中</div>
+    </a>
+  </nav>
+</section>
+
+<!-- Stage 7: STG Testing -->
+<section class="view stage-cat-qa" id="view-stage-7">
+  <nav class="stage-crumb">
+    <a class="back" href="#/overview"><span class="arrow">←</span> 返回流程總覽</a>
+    <span class="stage-crumb-count">08 / 11 · STG Testing</span>
+  </nav>
+  <header class="stage-hero">
+    <div class="stage-hero-head">
+      <div class="stage-no-big"><span>7</span></div>
+      <div class="stage-nm-wrap">
+        <div class="stage-en">STG Testing</div>
+        <div class="stage-nm">STG 測試中</div>
+      </div>
+    </div>
+    <div class="stage-meta">
+      <div class="stage-meta-i"><span class="stage-meta-lbl">時長</span><b>W10（1 週 / 5 日）</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">主責</span><b>QA</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">期別</span><b>執行期</b></div>
+    </div>
+  </header>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">◀</span>收到</div>
+    <ul>
+      <li>STG 釋出版本 <i>Ready for STG</i></li>
+      <li>測試情境清單 <i>QA / PO</i></li>
+      <li>PRD 5.1.7 驗收標準 <i>Planning / Design</i></li>
+      <li>指標字典、埋碼規格 <i>DA</i></li>
+      <li>非功能性需求 <i>DE / SRE</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">👥</span>職能分工</div>
+    <div class="role-rows">
+      <span class="rt r-qa">QA</span><div>整合測試、資料準確性驗證；同步標記上線驗證清單（主流程 + 高風險項，10–15 項）；BUG 分級</div>
+      <span class="rt r-po">PO</span><div>整合測試；BUG 分級裁決</div>
+      <span class="rt r-da">DA</span><div>Dashboard 數值確認；查詢邏輯；效能調校；埋碼驗證</div>
+      <span class="rt r-be">BE</span><div>缺陷釐清支援；效能測試</div>
+      <span class="rt r-fe">FE</span><div>缺陷釐清支援</div>
+      <span class="rt r-de">DE</span><div>資料準確性驗證支援</div>
+      <span class="rt r-ux">UIUX</span><div>介面問題確認</div>
+    </div>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">▶</span>交出</div>
+    <ul>
+      <li>測試執行結果、缺陷清單（已分級） <i>→ STG Fixing</i></li>
+      <li>效能測試結果 <i>→ Ready for Prod</i></li>
+      <li>Dashboard 數值與埋碼驗證結果 <i>→ STG Fixing</i></li>
+      <li>上線驗證清單 <i>→ Released</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-gate"><b>通過條件 — 測試執行完成</b>　上述項目全數執行完畢，缺陷已依 Severity（Blocker / Major / Minor）分級並指派修復負責人</div>
+
+  <nav class="stage-nav-foot">
+    <a class="stage-nav-btn prev stage-cat-gate" href="#/stage/6">
+      <div class="stage-nav-btn-lbl"><span class="stage-nav-btn-arrow">←</span> 上一階段</div>
+      <div class="stage-nav-btn-nm">6 · Ready for STG 待部署 STG</div>
+    </a>
+    <a class="stage-nav-btn next stage-cat-qa" href="#/stage/8">
+      <div class="stage-nav-btn-lbl">下一階段 <span class="stage-nav-btn-arrow">→</span></div>
+      <div class="stage-nav-btn-nm">8 · STG Fixing 缺陷修復</div>
+    </a>
+  </nav>
+</section>
+
+<!-- Stage 8: STG Fixing -->
+<section class="view stage-cat-qa" id="view-stage-8">
+  <nav class="stage-crumb">
+    <a class="back" href="#/overview"><span class="arrow">←</span> 返回流程總覽</a>
+    <span class="stage-crumb-count">09 / 11 · STG Fixing</span>
+  </nav>
+  <header class="stage-hero">
+    <div class="stage-hero-head">
+      <div class="stage-no-big"><span>8</span></div>
+      <div class="stage-nm-wrap">
+        <div class="stage-en">STG Fixing</div>
+        <div class="stage-nm">缺陷修復</div>
+      </div>
+    </div>
+    <div class="stage-meta">
+      <div class="stage-meta-i"><span class="stage-meta-lbl">時長</span><b>W11（1 週 / 5 日）</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">主責</span><b>BE / FE / QA</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">期別</span><b>執行期</b></div>
+    </div>
+  </header>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">◀</span>收到</div>
+    <ul>
+      <li>缺陷清單（已分級） <i>QA</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">👥</span>職能分工</div>
+    <div class="role-rows">
+      <span class="rt r-be">BE</span><div>Blocker / Major 缺陷修復</div>
+      <span class="rt r-fe">FE</span><div>Blocker / Major 缺陷修復</div>
+      <span class="rt r-de">DE</span><div>資料相關 Blocker / Major 缺陷修復</div>
+      <span class="rt r-da">DA</span><div>Dashboard / SQL 相關 Blocker / Major 缺陷修復</div>
+      <span class="rt r-ux">UIUX</span><div>畫面相關 Blocker / Major 缺陷修復</div>
+      <span class="rt r-qa">QA</span><div>回歸測試；測試報告歸檔</div>
+      <span class="rt r-po">PO</span><div>未結 BUG 裁決：延後上線或縮減本次上線範疇；STG 簽核</div>
+    </div>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">▶</span>交出</div>
+    <ul>
+      <li>缺陷修補紀錄 <i>→ QA 回歸</i></li>
+      <li>回歸測試結果 <i>→ Ready for Prod</i></li>
+      <li>STG 簽核 <i>→ Ready for Prod</i></li>
+      <li>PRD 5.1.10 測試報告 <i>→ 歸檔</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-ms"><b>本階段規則</b>　不進新功能，只處理 Blocker / Major 缺陷與回歸測試　·　Minor 列入下期追蹤，於 Backlog 建卡　·　修復引發的範疇變更一律走變更單</div>
+  <div class="stage-gate"><b>通過條件 — 驗收通過</b>　Blocker 全數結案、Major 已修復或經 PO 風險評估裁決 ＋ P0、P1 測試全數 PASS ＋ 回歸測試通過 ＋ STG 簽核完成 ＋ 測試報告歸檔</div>
+
+  <nav class="stage-nav-foot">
+    <a class="stage-nav-btn prev stage-cat-qa" href="#/stage/7">
+      <div class="stage-nav-btn-lbl"><span class="stage-nav-btn-arrow">←</span> 上一階段</div>
+      <div class="stage-nav-btn-nm">7 · STG Testing STG 測試中</div>
+    </a>
+    <a class="stage-nav-btn next stage-cat-gate" href="#/stage/9">
+      <div class="stage-nav-btn-lbl">下一階段 <span class="stage-nav-btn-arrow">→</span></div>
+      <div class="stage-nav-btn-nm">9 · Ready for Prod 待部署 Prod</div>
+    </a>
+  </nav>
+</section>
+
+<!-- Stage 9: Ready for Prod -->
+<section class="view stage-cat-gate" id="view-stage-9">
+  <nav class="stage-crumb">
+    <a class="back" href="#/overview"><span class="arrow">←</span> 返回流程總覽</a>
+    <span class="stage-crumb-count">10 / 11 · Ready for Prod</span>
+  </nav>
+  <header class="stage-hero">
+    <div class="stage-hero-head">
+      <div class="stage-no-big"><span>9</span></div>
+      <div class="stage-nm-wrap">
+        <div class="stage-en">Ready for Prod</div>
+        <div class="stage-nm">待部署 Prod</div>
+      </div>
+    </div>
+    <div class="stage-meta">
+      <div class="stage-meta-i"><span class="stage-meta-lbl">時長</span><b>W12 D1–D2（2 日）</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">主責</span><b>BE / FE</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">性質</span><b>交接閘門</b></div>
+    </div>
+  </header>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">◀</span>收到</div>
+    <ul>
+      <li>PRD 5.1.10 測試報告 <i>QA</i></li>
+      <li>STG 簽核 <i>PO</i></li>
+      <li>效能測試結果 <i>BE</i></li>
+      <li>教育訓練內容 <i>PO</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">👥</span>職能分工</div>
+    <div class="role-rows">
+      <span class="rt r-be">BE</span><div>PROD 部署準備；上線計畫；回滾方案</div>
+      <span class="rt r-fe">FE</span><div>PROD 部署準備；上線計畫；回滾方案</div>
+      <span class="rt r-de">DE</span><div>上線計畫（PROD 部署準備、回滾方案包在 BE）</div>
+      <span class="rt r-qa">QA</span><div>測試結果確認</div>
+      <span class="rt r-po">PO</span><div>上線決議；教育訓練</div>
+      <span class="rt r-biz">需求端</span><div>參與教育訓練</div>
+    </div>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">▶</span>交出</div>
+    <ul>
+      <li>上線計畫、回滾方案 <i>→ Released</i></li>
+      <li>上線決議紀錄 <i>→ Released</i></li>
+      <li>教育訓練紀錄 <i>→ 需求端</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-gate"><b>通過條件 — 可上線</b>　上線計畫與回滾方案確認、測試結果確認、上線決議完成、教育訓練完成</div>
+
+  <nav class="stage-nav-foot">
+    <a class="stage-nav-btn prev stage-cat-qa" href="#/stage/8">
+      <div class="stage-nav-btn-lbl"><span class="stage-nav-btn-arrow">←</span> 上一階段</div>
+      <div class="stage-nav-btn-nm">8 · STG Fixing 缺陷修復</div>
+    </a>
+    <a class="stage-nav-btn next stage-cat-rel" href="#/stage/10">
+      <div class="stage-nav-btn-lbl">下一階段 <span class="stage-nav-btn-arrow">→</span></div>
+      <div class="stage-nav-btn-nm">10 · Released 已上線</div>
+    </a>
+  </nav>
+</section>
+
+<!-- Stage 10: Released -->
+<section class="view stage-cat-rel" id="view-stage-10">
+  <nav class="stage-crumb">
+    <a class="back" href="#/overview"><span class="arrow">←</span> 返回流程總覽</a>
+    <span class="stage-crumb-count">11 / 11 · Released</span>
+  </nav>
+  <header class="stage-hero">
+    <div class="stage-hero-head">
+      <div class="stage-no-big"><span>10</span></div>
+      <div class="stage-nm-wrap">
+        <div class="stage-en">Released</div>
+        <div class="stage-nm">已上線</div>
+      </div>
+    </div>
+    <div class="stage-meta">
+      <div class="stage-meta-i"><span class="stage-meta-lbl">時長</span><b>W12 D2–D5 + 觀察 1~2 週</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">主責</span><b>PO</b></div>
+      <div class="stage-meta-i"><span class="stage-meta-lbl">期別</span><b>執行期末 + 觀察期</b></div>
+    </div>
+  </header>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">◀</span>收到</div>
+    <ul>
+      <li>上線計畫、回滾方案 <i>BE / FE</i></li>
+      <li>上線決議紀錄 <i>PO</i></li>
+      <li>上線驗證清單 <i>QA</i></li>
+      <li>指標字典、埋碼規格 <i>DA</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">👥</span>職能分工</div>
+    <div class="role-rows">
+      <span class="rt r-be">BE</span><div>PROD 部署</div>
+      <span class="rt r-fe">FE</span><div>PROD 部署</div>
+      <span class="rt r-de">DE</span><div>PROD 部署</div>
+      <span class="rt r-qa">QA</span><div>PROD 驗證：執行上線驗證清單</div>
+      <span class="rt r-sre">SRE</span><div>監控告警</div>
+      <span class="rt r-biz">需求端</span><div>PROD 驗收；PROD 簽核 &amp; 結案</div>
+      <span class="rt r-po">PO</span><div>PRD 歸檔<br><b>觀察期末</b> Retro Meeting（90 分，全職能）</div>
+      <span class="rt r-da">DA</span><div><b>+1~+2 週</b> 埋碼成效觀察</div>
+    </div>
+  </div>
+
+  <div class="stage-sect">
+    <div class="stage-sect-h"><span class="stage-sect-h-ic">▶</span>交出</div>
+    <ul>
+      <li>PROD 環境 產品 / 功能釋出</li>
+      <li>PROD 驗證結果 <i>→ 需求端驗收</i></li>
+      <li>監控告警設定 <i>→ 維運</i></li>
+      <li>PROD 驗收簽核、結案紀錄 <i>→ 主管</i></li>
+      <li>PRD &amp; Spec（最終版，已歸檔） <i>→ 知識庫</i></li>
+      <li>埋碼成效觀察結果 <i>→ Retro、下一週期 Discovery</i></li>
+      <li>Retro 報告、流程改善項 <i>→ PM Team</i></li>
+    </ul>
+  </div>
+
+  <div class="stage-rollback"><b>回滾</b>　驗證未通過即回滾，不在 PROD 現場修。判準見「補充章節 → 測試與上線規範 → 8.5 PROD 回滾判準」</div>
+  <div class="stage-gate"><b>通過條件 — 結案</b>　PROD 驗證通過、需求端 PROD 驗收簽核完成、監控告警就緒、PRD 歸檔、Retro 改善項列入 PM Team 流程迭代</div>
+
+  <nav class="stage-nav-foot">
+    <a class="stage-nav-btn prev stage-cat-gate" href="#/stage/9">
+      <div class="stage-nav-btn-lbl"><span class="stage-nav-btn-arrow">←</span> 上一階段</div>
+      <div class="stage-nav-btn-nm">9 · Ready for Prod 待部署 Prod</div>
+    </a>
+    <a class="stage-nav-btn next" href="#/overview" hidden></a>
+  </nav>
+
+  <!-- 流程結束，回到總覽的 CTA -->
+  <div style="margin-top:24px;text-align:center">
+    <a class="back" href="#/overview" style="padding:10px 24px;background:var(--p);color:#fff;border-color:var(--p);font-size:13px">
+      🎉 流程走完 · <span style="opacity:.85">回到流程總覽</span> <span class="arrow">→</span>
+    </a>
+  </div>
+</section>
+
+</div>
+<!-- end .container -->
+
+<script>
+/* ═══════════════════════════════════════
+   SPA Hash Router
+   ═══════════════════════════════════════ */
+const STAGE_NAMES = [
+  'Backlog','Discovery','Planning','Design','Ready for Dev',
+  'Development','Ready for STG','STG Testing','STG Fixing',
+  'Ready for Prod','Released'
+];
+
+function updateCrumbMeta(n){
+  const m = document.getElementById('crumb-meta');
+  if(!m) return;
+  if(n === null || n === undefined){
+    m.textContent = 'DIP Playbook v1.1';
+  } else {
+    m.textContent = 'Stage ' + n + ' · ' + STAGE_NAMES[n];
+  }
+}
+
+function updatePageTitle(n){
+  if(n === null || n === undefined){
+    document.title = '產品開發標準流程 · DIP Playbook';
+  } else {
+    document.title = n + '. ' + STAGE_NAMES[n] + ' · DIP Playbook';
+  }
+}
+
+/* 核心切換函式 — 讀 hash 或直接讀路徑 */
+function showView(route){
+  // route 格式: '#/overview' 或 '#/stage/5' 或 '/overview' 或 '/stage/5'
+  route = (route || '').replace(/^#/, '') || '/overview';
+
+  // 隱藏所有 view
+  document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+
+  // 匹配 /stage/N
+  const match = route.match(/^\/stage\/(\d+)$/);
+  if(match){
+    const n = parseInt(match[1], 10);
+    if(n >= 0 && n <= 10){
+      const el = document.getElementById('view-stage-' + n);
+      if(el){
+        el.classList.add('active');
+        updateCrumbMeta(n);
+        updatePageTitle(n);
+      } else {
+        document.getElementById('view-overview').classList.add('active');
+        updateCrumbMeta(null);
+        updatePageTitle(null);
+      }
+    } else {
+      document.getElementById('view-overview').classList.add('active');
+      updateCrumbMeta(null);
+      updatePageTitle(null);
+    }
+  } else {
+    document.getElementById('view-overview').classList.add('active');
+    updateCrumbMeta(null);
+    updatePageTitle(null);
+  }
+
+  // 捲到頂（兼容舊瀏覽器）
+  try {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  } catch(e) {
+    window.scrollTo(0, 0);
+  }
+}
+
+function router(){
+  showView(window.location.hash);
+}
+
+/* ═══════════════════════════════════════
+   Accordion Toggle
+   ═══════════════════════════════════════ */
+function toggleAcc(headEl){
+  const acc = headEl.parentElement;
+  acc.classList.toggle('open');
+}
+
+function openAccById(id){
+  const el = document.getElementById(id);
+  if(el){
+    el.classList.add('open');
+    el.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+}
+
+/* ═══════════════════════════════════════
+   Click Handler (iframe-safe)
+   直接攔截所有 href="#/..." 的連結點擊
+   這樣在 Claude Preview iframe / 本機 / 已部署 都能動
+   ═══════════════════════════════════════ */
+document.addEventListener('click', function(e){
+  // 找最近的 <a href="#/...">
+  const link = e.target.closest('a[href^="#/"]');
+  if(!link) return;
+  e.preventDefault();
+  const href = link.getAttribute('href');
+  // 嘗試更新 URL hash（部署環境可分享 URL）
+  try {
+    if(window.location.hash !== href){
+      window.location.hash = href;
+    }
+  } catch(err) { /* iframe 可能擋 — 不影響切換 */ }
+  // 直接切 view（不依賴 hashchange 事件）
+  showView(href);
+});
+
+/* ═══════════════════════════════════════
+   Swimlane Tab Switcher
+   ═══════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.sw-tabs button').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('.sw-tabs button').forEach(function(x){
+        x.classList.toggle('on', x === b);
+      });
+      document.querySelectorAll('.sw-view').forEach(function(v){
+        v.hidden = (v.id !== b.dataset.v);
+      });
+    });
+  });
+});
+
+/* ═══════════════════════════════════════
+   Boot
+   ═══════════════════════════════════════ */
+window.addEventListener('hashchange', router);
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', router);
+} else {
+  router();
+}
+</script>
+
+</body>
+</html>
